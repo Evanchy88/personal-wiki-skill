@@ -114,6 +114,9 @@ async function compile(kbPath, options = {}) {
 
   const state = loadKbState(resolvedPath);
   
+  // Temporary directory for converted Markdown files
+  const tempMdDir = path.join(resolvedPath, '.tmp-converted');
+  
   // Step 1: Convert non-Markdown files to Markdown
   console.log('📂 扫描 raw/ 目录...');
   const { mdFiles, converted, skipped, errors } = scanAndConvertDirectory(rawDir, tempMdDir);
