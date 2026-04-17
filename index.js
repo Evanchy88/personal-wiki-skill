@@ -53,25 +53,25 @@ async function main(command, options = {}) {
 
   switch (command) {
     case 'init':
-      return initCmd.run(kbPath, options);
+      return initCmd.init(kbPath, options);
     
     case 'compile':
-      return compileCmd.run(kbPath, options);
+      return compileCmd.compile(kbPath, options);
     
     case 'clean':
-      return cleanCmd.run(kbPath, options);
+      return cleanCmd.clean(kbPath, options);
     
     case 'lint':
-      return lintCmd.run(kbPath, options);
+      return lintCmd.lint(kbPath, options);
     
     case 'qa':
-      return qaCmd.run(kbPath, options);
+      return qaCmd.qa(kbPath, options);
     
     case 'status':
-      return statusCmd.run(kbPath, options);
+      return statusCmd.status(kbPath, options);
     
     case 'view':
-      return viewCmd.run(kbPath, options);
+      return viewCmd.view(kbPath, options);
     
     case 'git':
       return gitCmd.run(kbPath, options);
