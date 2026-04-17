@@ -236,8 +236,9 @@ knowledge-base/
 
 **自动转换机制**：
 - 编译时自动检测非 Markdown 文件并转换为 Markdown
-- 转换后的 Markdown 文件保存在临时目录，编译完成后自动清理
-- 源文件保留不变，不会被修改
+- 转换后的 Markdown 文件直接保存到 `raw/` 目录，与源文件同名（如 `文章.pdf` → `文章.md`）
+- 已转换的文件会跳过后续编译，避免重复转换
+- 源文件保留不变，不会被修改或删除
 - 推荐安装 `markitdown` 获得最佳转换效果：`npm install -g markitdown`
 
 ## 文件限制
