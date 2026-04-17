@@ -71,6 +71,10 @@ function initWikiStructure(kbPath) {
     'wiki/concepts',
     'wiki/people',
     'wiki/topics',
+    'wiki/methods',      // 学术：方法论
+    'wiki/findings',     // 学术：研究发现
+    'wiki/events',       // 新闻：事件
+    'wiki/techniques',   // 技术：技术方案
     'images'
   ];
   
