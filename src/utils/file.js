@@ -1,8 +1,24 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const { isSupportedFormat, isMarkdownFile, convertAndSave, SUPPORTED_FORMATS } = require('./convert');
 
-function scanDirectory(dir, extensions = ['.md', '.txt']) {
+// 支持扫描的所有文件格式
+const ALL_SUPPORTED_EXTENSIONS = [
+  '.md', '.markdown',  // Markdown
+  '.txt',               // 纯文本
+  '.pdf',               // PDF
+  '.docx',              // Word
+  '.pptx',              // PowerPoint
+  '.xlsx', '.xls',      // Excel
+  '.html', '.htm',      // HTML
+  '.epub',              // EPUB 电子书
+  '.csv',               // CSV
+  '.xml',               // XML
+  '.json'               // JSON
+];
+
+function scanDirectory(dir, extensions = ALL_SUPPORTED_EXTENSIONS) {
   if (!fs.existsSync(dir)) return [];
   
   const files = [];
@@ -109,6 +125,59 @@ function extractWikiLinks(content) {
   return [...new Set(links)];
 }
 
+/**
+ * 扫描目录中的非 Markdown 文件并转换为 Markdown
+ */
+function scanAndConvertDirectory(rawDir, tempDir) {
+  if (!fs.existsSync(rawDir)) return { mdFiles: [], converted: 0, skipped: 0, errors: [] };
+  
+  if (!fs.existsSync(tempDir)) {
+    fs.mkdirSync(tempDir, { recursive: true });
+  }
+  
+  const allFiles = scanDirectory(rawDir);
+  const mdFiles = [];
+  let converted = 0;
+  let skipped = 0;
+  const errors = [];
+  
+  for (const file of allFiles) {
+    if (isMarkdownFile(file)) {
+      mdFiles.push(file);
+      skipped++;
+    } else if (isSupportedFormat(file)) {
+      try {
+        const convertedPath = convertAndSave(file, tempDir);
+        if (convertedPath) {
+          mdFiles.push(convertedPath);
+          converted++;
+        } else {
+          errors.push(path.basename(file));
+        }
+      } catch (e) {
+        console.log(`  ❌ 转换失败 ${path.basename(file)}: ${e.message}`);
+        errors.push(path.basename(file));
+      }
+    }
+  }
+  
+  return { mdFiles, converted, skipped, errors };
+}
+
+function cleanConvertedFiles(tempDir) {
+  if (!fs.existsSync(tempDir)) return;
+  const files = fs.readdirSync(tempDir);
+  for (const file of files) {
+    if (file.endsWith('.md')) {
+      fs.unlinkSync(path.join(tempDir, file));
+    }
+  }
+}
+
+function getSupportedFormats() {
+  return { ...SUPPORTED_FORMATS };
+}
+
 module.exports = {
   scanDirectory,
   computeHash,
@@ -119,5 +188,10 @@ module.exports = {
   writeMarkdownFile,
   detectDirtyContent,
   listWikiFiles,
-  extractWikiLinks
+  extractWikiLinks,
+  scanAndConvertDirectory,
+  cleanConvertedFiles,
+  getSupportedFormats,
+  isMarkdownFile,
+  isSupportedFormat
 };

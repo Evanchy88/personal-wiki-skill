@@ -1,7 +1,7 @@
 const path = require('path');
 const fs = require('fs');
 const { resolveKbPath, loadKbState, saveKbState } = require('../utils/config');
-const { scanDirectory, computeHash, getFileStats, detectDirtyContent, readMarkdownFile, writeMarkdownFile, extractWikiLinks } = require('../utils/file');
+const { scanDirectory, computeHash, getFileStats, detectDirtyContent, readMarkdownFile, writeMarkdownFile, extractWikiLinks, scanAndConvertDirectory, cleanConvertedFiles, getSupportedFormats } = require('../utils/file');
 const { autoCommitWiki } = require('../utils/git');
 const { loadPrompt, fillPrompt, callLLM } = require('../utils/llm');
 
@@ -113,12 +113,26 @@ async function compile(kbPath, options = {}) {
   });
 
   const state = loadKbState(resolvedPath);
-  const rawFiles = scanDirectory(rawDir);
-  if (rawFiles.length === 0) {
-    console.log('❌ raw/ 目录为空，请先添加一些文章');
+  
+  // Step 1: Convert non-Markdown files to Markdown
+  console.log('📂 扫描 raw/ 目录...');
+  const { mdFiles, converted, skipped, errors } = scanAndConvertDirectory(rawDir, tempMdDir);
+  
+  if (mdFiles.length === 0) {
+    console.log('❌ raw/ 目录为空或无可支持的文件，请先添加一些文章');
+    console.log(`   支持的格式: ${Object.values(getSupportedFormats()).join(', ')}`);
+    cleanConvertedFiles(tempMdDir);
     return;
   }
+  
+  if (converted > 0) {
+    console.log(`  ✓ 转换了 ${converted} 个非 Markdown 文件`);
+  }
+  if (errors.length > 0) {
+    console.log(`  ⚠️ ${errors.length} 个文件转换失败: ${errors.join(', ')}`);
+  }
 
+  const rawFiles = mdFiles;
   const changes = { added: [], modified: [], deleted: [], unchanged: [] };
 
   for (const file of rawFiles) {
@@ -349,10 +363,13 @@ async function compile(kbPath, options = {}) {
 
   updateIndex(resolvedPath, wikiDir);
   saveKbState(resolvedPath, state);
+  
+  // Clean up temporary converted Markdown files
+  cleanConvertedFiles(tempMdDir);
 
   autoCommitWiki(resolvedPath, `wiki: compile - ${report.processed} files, ${report.concepts} concepts, ${report.topics} topics`);
 
-  console.log(`\n✓ 编译完成!\n\n📋 编译报告\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n📥 输入统计\n  • 处理文件: ${report.processed} 个\n  • 跳过文件: ${changes.unchanged.length} 个 (未变更)\n  • 清洗脏数据: ${report.cleaned} 个\n\n📤 输出统计\n  • 生成摘要: ${report.processed} 篇\n  • 提取概念: ${report.concepts} 个\n  • 提取人物: ${report.people} 个\n  • 生成主题: ${report.topics} 个\n  • Wiki链接: ${report.links} 条\n  • 移除无效链接: ${report.invalidLinksRemoved} 个\n\n⚠️ 问题发现\n  • 编译失败: ${report.issues.length} 个\n${report.issues.map(i => `  • ${i.file}: ${i.error}`).join('\n') || '  • 无'}\n\n💡 建议\n  • 请抽检 wiki/summaries/ 确认内容准确性\n  • 运行 wiki lint 进行深度质量检查\n  • 运行 wiki view 查看完整知识库\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n✓ 已自动提交Git`);
+  console.log(`\n✓ 编译完成!\n\n📋 编译报告\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n📥 输入统计\n  • 处理文件: ${report.processed} 个\n  • 跳过文件: ${changes.unchanged.length} 个 (未变更)\n  • 清洗脏数据: ${report.cleaned} 个\n  • 格式转换: ${converted} 个文件\n\n📤 输出统计\n  • 生成摘要: ${report.processed} 篇\n  • 提取概念: ${report.concepts} 个\n  • 提取人物: ${report.people} 个\n  • 生成主题: ${report.topics} 个\n  • Wiki链接: ${report.links} 条\n  • 移除无效链接: ${report.invalidLinksRemoved} 个\n\n⚠️ 问题发现\n  • 编译失败: ${report.issues.length} 个\n${report.issues.map(i => `  • ${i.file}: ${i.error}`).join('\n') || '  • 无'}\n${errors.length > 0 ? `\n  • 转换失败: ${errors.length} 个\n${errors.map(e => `  • ${e}`).join('\n')}` : ''}\n\n💡 建议\n  • 请抽检 wiki/summaries/ 确认内容准确性\n  • 运行 wiki lint 进行深度质量检查\n  • 运行 wiki view 查看完整知识库\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n✓ 已自动提交Git`);
 }
 
 function parseJsonFromLlmOutput(text) {

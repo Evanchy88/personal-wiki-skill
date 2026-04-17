@@ -220,13 +220,25 @@ knowledge-base/
 
 ## 文件格式支持
 
-| 格式 | 说明 |
-|------|------|
-| .md | 直接读取 |
-| .txt | 直接读取 |
-| .html | 需转换+清洗（自动去除广告/导航） |
-| .pdf | 需转换 |
-| .docx | 需转换 |
+| 格式 | 说明 | 转换方式 |
+|------|------|----------|
+| .md, .markdown | Markdown | 直接读取 |
+| .txt | 纯文本 | 直接读取 |
+| .pdf | PDF文档 | markitdown / pandoc 转换 |
+| .docx | Word文档 | markitdown / pandoc 转换 |
+| .pptx | PowerPoint | markitdown / pandoc 转换 |
+| .xlsx, .xls | Excel表格 | markitdown / pandoc 转换 |
+| .html, .htm | 网页 | 内置HTML转换器（自动去除广告/导航） |
+| .epub | EPUB电子书 | markitdown / pandoc 转换 |
+| .csv | CSV表格 | 内置CSV转Markdown表格 |
+| .json | JSON数据 | 内置JSON格式化 |
+| .xml | XML数据 | 需 markitdown / pandoc |
+
+**自动转换机制**：
+- 编译时自动检测非 Markdown 文件并转换为 Markdown
+- 转换后的 Markdown 文件保存在临时目录，编译完成后自动清理
+- 源文件保留不变，不会被修改
+- 推荐安装 `markitdown` 获得最佳转换效果：`npm install -g markitdown`
 
 ## 文件限制
 
