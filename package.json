@@ -1,0 +1,33 @@
+{
+  "name": "personal-wiki",
+  "version": "1.0.0",
+  "description": "Build and maintain a personal knowledge base wiki using LLM-powered compilation. Inspired by Karpathy's knowledge base method.",
+  "main": "index.js",
+  "scripts": {
+    "init": "node src/commands/init.js",
+    "compile": "node src/commands/compile.js",
+    "clean": "node src/commands/clean.js",
+    "lint": "node src/commands/lint.js",
+    "qa": "node src/commands/qa.js",
+    "status": "node src/commands/status.js",
+    "view": "node src/commands/view.js",
+    "git": "node src/commands/git.js",
+    "remote": "node src/commands/remote.js"
+  },
+  "keywords": [
+    "knowledge-base",
+    "wiki",
+    "llm",
+    "obsidian",
+    "markdown",
+    "personal-wiki",
+    "karpathy"
+  ],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}

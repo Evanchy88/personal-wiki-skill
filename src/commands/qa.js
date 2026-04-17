@@ -1,0 +1,98 @@
+const path = require('path');
+const fs = require('fs');
+const { resolveKbPath, loadKbState } = require('../utils/config');
+const { scanDirectory, readMarkdownFile, extractWikiLinks, listWikiFiles } = require('../utils/file');
+const { answerQuestion } = require('../utils/llm');
+
+async function qa(question, kbPath) {
+  const resolvedPath = kbPath ? path.resolve(kbPath) : resolveKbPath();
+  const wikiDir = path.join(resolvedPath, 'wiki');
+  
+  if (!fs.existsSync(wikiDir)) {
+    console.log('❌ 知识库尚未初始化，请先运行 wiki init');
+    return;
+  }
+  
+  console.log('📚 正在从知识库中检索...');
+  
+  // Search relevant content
+  const relevantFiles = searchWiki(wikiDir, question);
+  
+  if (relevantFiles.length === 0) {
+    console.log(`\n❌ 知识库中暂无关于"${question}"的内容。
+
+💡 建议:
+• 将相关文章保存到 raw/ 目录
+• 运行 wiki compile 编译知识库`);
+    return;
+  }
+  
+  console.log(`  • 找到相关文件: ${relevantFiles.length} 篇`);
+  
+  // Build context
+  let context = '';
+  for (const file of relevantFiles) {
+    const content = readMarkdownFile(file);
+    if (content) {
+      context += `\n--- ${path.relative(wikiDir, file)} ---\n${content}\n`;
+    }
+  }
+  
+  // Call LLM to answer
+  console.log('\n💡 基于知识库的回答:\n');
+  
+  // In actual implementation, call answerQuestion()
+  console.log(`[Answer based on wiki content]
+
+${question}
+
+[Detailed answer would be generated here based on the wiki content]
+
+📖 参考来源:`);
+  
+  for (const file of relevantFiles) {
+    console.log(`  • ${path.relative(wikiDir, file)}`);
+  }
+}
+
+function searchWiki(wikiDir, question) {
+  const results = [];
+  const keywords = question.toLowerCase().split(/\s+/);
+  
+  // Search in index.md
+  const indexFile = path.join(wikiDir, 'index.md');
+  if (fs.existsSync(indexFile)) {
+    const index = fs.readFileSync(indexFile, 'utf-8');
+    if (keywords.some(kw => index.toLowerCase().includes(kw))) {
+      results.push(indexFile);
+    }
+  }
+  
+  // Search in concepts
+  const conceptsDir = path.join(wikiDir, 'concepts');
+  if (fs.existsSync(conceptsDir)) {
+    const files = fs.readdirSync(conceptsDir).filter(f => f.endsWith('.md'));
+    for (const file of files) {
+      const content = fs.readFileSync(path.join(conceptsDir, file), 'utf-8');
+      if (keywords.some(kw => content.toLowerCase().includes(kw))) {
+        results.push(path.join(conceptsDir, file));
+      }
+    }
+  }
+  
+  // Search in summaries
+  const summariesDir = path.join(wikiDir, 'summaries');
+  if (fs.existsSync(summariesDir)) {
+    const files = fs.readdirSync(summariesDir).filter(f => f.endsWith('.md'));
+    for (const file of files) {
+      const content = fs.readFileSync(path.join(summariesDir, file), 'utf-8');
+      if (keywords.some(kw => content.toLowerCase().includes(kw))) {
+        results.push(path.join(summariesDir, file));
+      }
+    }
+  }
+  
+  return [...new Set(results)];
+}
+
+module.exports = { qa, searchWiki };
