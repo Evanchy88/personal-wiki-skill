@@ -127,27 +127,25 @@ function extractWikiLinks(content) {
 
 /**
  * 扫描目录中的非 Markdown 文件并转换为 Markdown
+ * 转换后的 .md 文件直接保存到 raw/ 目录，持久化存储
  */
 function scanAndConvertDirectory(rawDir, tempDir) {
   if (!fs.existsSync(rawDir)) return { mdFiles: [], converted: 0, skipped: 0, errors: [] };
-  
-  if (!fs.existsSync(tempDir)) {
-    fs.mkdirSync(tempDir, { recursive: true });
-  }
-  
+
   const allFiles = scanDirectory(rawDir);
   const mdFiles = [];
   let converted = 0;
   let skipped = 0;
   const errors = [];
-  
+
   for (const file of allFiles) {
     if (isMarkdownFile(file)) {
       mdFiles.push(file);
       skipped++;
     } else if (isSupportedFormat(file)) {
       try {
-        const convertedPath = convertAndSave(file, tempDir);
+        // 转换后的 .md 直接存到 raw/ 目录，与源文件同名
+        const convertedPath = convertAndSave(file, rawDir);
         if (convertedPath) {
           mdFiles.push(convertedPath);
           converted++;
@@ -160,7 +158,7 @@ function scanAndConvertDirectory(rawDir, tempDir) {
       }
     }
   }
-  
+
   return { mdFiles, converted, skipped, errors };
 }
 

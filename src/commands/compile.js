@@ -1,7 +1,7 @@
 const path = require('path');
 const fs = require('fs');
 const { resolveKbPath, loadKbState, saveKbState } = require('../utils/config');
-const { scanDirectory, computeHash, getFileStats, detectDirtyContent, readMarkdownFile, writeMarkdownFile, extractWikiLinks, scanAndConvertDirectory, cleanConvertedFiles, getSupportedFormats } = require('../utils/file');
+const { scanDirectory, computeHash, getFileStats, detectDirtyContent, readMarkdownFile, writeMarkdownFile, extractWikiLinks, scanAndConvertDirectory, getSupportedFormats } = require('../utils/file');
 const { autoCommitWiki } = require('../utils/git');
 const { loadPrompt, fillPrompt, callLLM } = require('../utils/llm');
 
@@ -113,18 +113,14 @@ async function compile(kbPath, options = {}) {
   });
 
   const state = loadKbState(resolvedPath);
-  
-  // Temporary directory for converted Markdown files
-  const tempMdDir = path.join(resolvedPath, '.tmp-converted');
-  
-  // Step 1: Convert non-Markdown files to Markdown
+
+  // Step 1: Convert non-Markdown files to Markdown (saved directly to raw/)
   console.log('📂 扫描 raw/ 目录...');
-  const { mdFiles, converted, skipped, errors } = scanAndConvertDirectory(rawDir, tempMdDir);
+  const { mdFiles, converted, skipped, errors } = scanAndConvertDirectory(rawDir);
   
   if (mdFiles.length === 0) {
     console.log('❌ raw/ 目录为空或无可支持的文件，请先添加一些文章');
     console.log(`   支持的格式: ${Object.values(getSupportedFormats()).join(', ')}`);
-    cleanConvertedFiles(tempMdDir);
     return;
   }
   
@@ -366,9 +362,6 @@ async function compile(kbPath, options = {}) {
 
   updateIndex(resolvedPath, wikiDir);
   saveKbState(resolvedPath, state);
-  
-  // Clean up temporary converted Markdown files
-  cleanConvertedFiles(tempMdDir);
 
   autoCommitWiki(resolvedPath, `wiki: compile - ${report.processed} files, ${report.concepts} concepts, ${report.topics} topics`);
 
