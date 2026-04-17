@@ -138,6 +138,7 @@ function scanAndConvertDirectory(rawDir, tempDir) {
 
   const allFiles = scanDirectory(rawDir);
   const mdFiles = [];
+  const mdFileSet = new Set();  // Track existing .md files to avoid duplicates
   let converted = 0;
   let skipped = 0;
   const errors = [];
@@ -145,13 +146,18 @@ function scanAndConvertDirectory(rawDir, tempDir) {
   for (const file of allFiles) {
     if (isMarkdownFile(file)) {
       mdFiles.push(file);
+      mdFileSet.add(file);
       skipped++;
     } else if (isSupportedFormat(file)) {
       try {
         // 转换后的 .md 直接存到 raw/ 目录，与源文件同名
         const convertedPath = convertAndSave(file, rawDir);
         if (convertedPath) {
-          mdFiles.push(convertedPath);
+          // Only add if not already in the list (avoid duplicates)
+          if (!mdFileSet.has(convertedPath)) {
+            mdFiles.push(convertedPath);
+            mdFileSet.add(convertedPath);
+          }
           converted++;
         } else {
           errors.push(path.basename(file));
