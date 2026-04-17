@@ -74,7 +74,38 @@ ${result || '无分支信息'}
 `);
 }
 
+/**
+ * Main dispatcher for git subcommands
+ */
+async function run(kbPath, options) {
+  const subcommand = options._ ? options._[0] : undefined;
+  
+  switch (subcommand) {
+    case 'status':
+      return gitStatus(kbPath);
+    
+    case 'log':
+      return gitLog(kbPath);
+    
+    case 'diff':
+      return gitDiff(kbPath, options._[1]);
+    
+    case 'rollback':
+      return gitRollback(kbPath, options._[1]);
+    
+    case 'stash':
+      return gitStash(kbPath);
+    
+    case 'branch':
+      return gitBranchCmd(kbPath, options._[1]);
+    
+    default:
+      return gitStatus(kbPath);
+  }
+}
+
 module.exports = {
+  run,
   gitStatus,
   gitLog,
   gitDiff,

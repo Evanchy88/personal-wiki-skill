@@ -2,7 +2,6 @@ const path = require('path');
 const fs = require('fs');
 const { resolveKbPath, loadKbState } = require('../utils/config');
 const { scanDirectory, readMarkdownFile, extractWikiLinks, listWikiFiles } = require('../utils/file');
-const { answerQuestion } = require('../utils/llm');
 
 async function qa(question, kbPath) {
   const resolvedPath = kbPath ? path.resolve(kbPath) : resolveKbPath();
@@ -38,18 +37,11 @@ async function qa(question, kbPath) {
     }
   }
   
-  // Call LLM to answer
+  // Output context so AI tool can read wiki content and answer based on it
   console.log('\n💡 基于知识库的回答:\n');
+  console.log(context);
   
-  // In actual implementation, call answerQuestion()
-  console.log(`[Answer based on wiki content]
-
-${question}
-
-[Detailed answer would be generated here based on the wiki content]
-
-📖 参考来源:`);
-  
+  console.log('\n📖 参考来源:');
   for (const file of relevantFiles) {
     console.log(`  • ${path.relative(wikiDir, file)}`);
   }

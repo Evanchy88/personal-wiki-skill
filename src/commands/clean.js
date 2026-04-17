@@ -22,9 +22,22 @@ async function clean(filePath, kbPath) {
       const content = readMarkdownFile(file);
       if (content && detectDirtyContent(content)) {
         console.log(`  • 清洗 ${path.relative(rawDir, file)}...`);
-        const cleanContent = await cleanDocument(content);
-        // In actual implementation, use the cleaned content
-        cleaned++;
+        try {
+          const cleanContent = await cleanDocument(content);
+          if (cleanContent && cleanContent.content) {
+            writeMarkdownFile(file, cleanContent.content);
+            cleaned++;
+            console.log(`    ✓ 已保存清洗结果`);
+          } else if (typeof cleanContent === 'string') {
+            writeMarkdownFile(file, cleanContent);
+            cleaned++;
+            console.log(`    ✓ 已保存清洗结果`);
+          } else {
+            console.log(`    ⚠️ 清洗返回空结果，跳过`);
+          }
+        } catch (e) {
+          console.log(`    ❌ 清洗失败: ${e.message}`);
+        }
       }
     }
     
@@ -44,12 +57,21 @@ async function clean(filePath, kbPath) {
   }
   
   console.log('🧹 正在清洗文档...');
-  console.log('  • 删除广告: 3 处');
-  console.log('  • 删除导航: 2 处');
-  console.log('  • 删除评论: 15 条');
-  console.log('  • 保留正文: ✓');
   
-  console.log('\n✓ 清洗完成，已覆盖原文件');
+  try {
+    const cleanResult = await cleanDocument(content);
+    if (cleanResult && cleanResult.content) {
+      writeMarkdownFile(fileToClean, cleanResult.content);
+      console.log('✓ 清洗完成，已覆盖原文件');
+    } else if (typeof cleanResult === 'string') {
+      writeMarkdownFile(fileToClean, cleanResult);
+      console.log('✓ 清洗完成，已覆盖原文件');
+    } else {
+      console.log('❌ 清洗返回空结果');
+    }
+  } catch (e) {
+    console.log(`❌ 清洗失败: ${e.message}`);
+  }
 }
 
 function scanFiles(dir) {

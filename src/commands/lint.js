@@ -129,7 +129,38 @@ function checkConflicts(wikiDir) {
 
 function checkMissingConcepts(wikiDir) {
   const missing = [];
-  // Implementation would scan summaries and find referenced concepts that don't exist
+  const existingConcepts = new Set();
+  
+  // 扫描已存在的概念文件
+  const conceptsDir = path.join(wikiDir, 'concepts');
+  if (fs.existsSync(conceptsDir)) {
+    fs.readdirSync(conceptsDir).forEach(file => {
+      if (file.endsWith('.md')) {
+        existingConcepts.add(path.basename(file, '.md'));
+      }
+    });
+  }
+  
+  // 扫描所有 wiki 文件，查找引用的概念
+  const files = getAllWikiFiles(wikiDir);
+  for (const file of files) {
+    const content = readMarkdownFile(file);
+    if (!content) continue;
+    
+    const links = extractWikiLinks(content);
+    for (const link of links) {
+      // 检查是否是概念引用（以 concepts/ 开头或在概念目录中不存在）
+      const conceptPath = path.join(wikiDir, 'concepts', `${link}.md`);
+      if (!fs.existsSync(conceptPath) && !existingConcepts.has(link)) {
+        // 创建空概念文件
+        ensureDirectory(path.dirname(conceptPath));
+        writeMarkdownFile(conceptPath, `# ${link}\n\n> ⚠️ 此概念文件由系统自动创建，内容待补充。`);
+        missing.push(link);
+        existingConcepts.add(link); // 避免重复创建
+      }
+    }
+  }
+  
   return missing;
 }
 

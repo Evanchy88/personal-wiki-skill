@@ -59,7 +59,29 @@ Git邮箱: ${config.email}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
 }
 
+/**
+ * Main dispatcher for remote subcommands
+ */
+async function run(kbPath, options) {
+  const subcommand = options._ ? options._[0] : undefined;
+  
+  switch (subcommand) {
+    case 'setup':
+      return remoteSetup(kbPath, options._[1]);
+    
+    case 'sync':
+      return remoteSync(kbPath);
+    
+    case 'status':
+      return remoteStatus(kbPath);
+    
+    default:
+      return remoteStatus(kbPath);
+  }
+}
+
 module.exports = {
+  run,
   remoteSetup,
   remoteSync,
   remoteStatus

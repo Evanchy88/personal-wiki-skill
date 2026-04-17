@@ -107,25 +107,29 @@ function loadPromptForType(stage, docType, promptsDir) {
  * @returns {string} 清理后的内容
  */
 function validateAndCleanWikiLinks(content, validLinks, report = null) {
-  // 匹配 [[wikilink]] 格式
+  // Match [[wikilink]] format
   const wikilinkRegex = /\[\[([^\]]+)\]\]/g;
   let removedCount = 0;
   
   const cleaned = content.replace(wikilinkRegex, (match, linkText) => {
     const cleanName = linkText.trim();
     
-    // 检查是否是有效的链接
+    // Check if it's a valid link
     const isValid = 
       validLinks.concepts.has(cleanName) ||
       validLinks.people.has(cleanName) ||
       validLinks.summaries.has(cleanName) ||
-      validLinks.topics.has(cleanName);
+      validLinks.topics.has(cleanName) ||
+      validLinks.methods.has(cleanName) ||
+      validLinks.findings.has(cleanName) ||
+      validLinks.events.has(cleanName) ||
+      validLinks.techniques.has(cleanName);
     
     if (isValid) {
-      return match; // 保留有效链接
+      return match; // Keep valid links
     }
     
-    // 无效链接：移除 wikilink 格式，只保留纯文本
+    // Invalid link: remove wikilink format, keep plain text only
     removedCount++;
     return cleanName;
   });
@@ -145,10 +149,14 @@ function buildValidLinksSet(wikiDir) {
     concepts: new Set(),
     people: new Set(),
     summaries: new Set(),
-    topics: new Set()
+    topics: new Set(),
+    methods: new Set(),
+    findings: new Set(),
+    events: new Set(),
+    techniques: new Set()
   };
   
-  // 扫描 concepts 目录
+  // Scan concepts directory
   const conceptsDir = path.join(wikiDir, 'concepts');
   if (fs.existsSync(conceptsDir)) {
     fs.readdirSync(conceptsDir).forEach(file => {
@@ -158,7 +166,7 @@ function buildValidLinksSet(wikiDir) {
     });
   }
   
-  // 扫描 people 目录
+  // Scan people directory
   const peopleDir = path.join(wikiDir, 'people');
   if (fs.existsSync(peopleDir)) {
     fs.readdirSync(peopleDir).forEach(file => {
@@ -168,7 +176,7 @@ function buildValidLinksSet(wikiDir) {
     });
   }
   
-  // 扫描 summaries 目录
+  // Scan summaries directory
   const summariesDir = path.join(wikiDir, 'summaries');
   if (fs.existsSync(summariesDir)) {
     fs.readdirSync(summariesDir).forEach(file => {
@@ -178,7 +186,7 @@ function buildValidLinksSet(wikiDir) {
     });
   }
   
-  // 扫描 topics 目录
+  // Scan topics directory
   const topicsDir = path.join(wikiDir, 'topics');
   if (fs.existsSync(topicsDir)) {
     fs.readdirSync(topicsDir).forEach(file => {
@@ -186,6 +194,21 @@ function buildValidLinksSet(wikiDir) {
         validLinks.topics.add(path.basename(file, '.md'));
       }
     });
+  }
+  
+  // Scan type-specific directories
+  const typeDirs = ['methods', 'findings', 'events', 'techniques'];
+  for (const typeDir of typeDirs) {
+    const dirPath = path.join(wikiDir, typeDir);
+    if (fs.existsSync(dirPath)) {
+      fs.readdirSync(dirPath).forEach(file => {
+        if (file.endsWith('.md')) {
+          const name = path.basename(file, '.md');
+          validLinks[typeDir].add(name);
+          validLinks.concepts.add(name); // Also add to concepts for cross-type linking
+        }
+      });
+    }
   }
   
   return validLinks;
