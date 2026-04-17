@@ -5,6 +5,99 @@ const { scanDirectory, computeHash, getFileStats, detectDirtyContent, readMarkdo
 const { autoCommitWiki } = require('../utils/git');
 const { loadPrompt, fillPrompt, callLLM } = require('../utils/llm');
 
+/**
+ * 验证并清理 wikilink
+ * 将无效的 wikilink（指向不存在的文件）移除，避免 Obsidian 图谱出现幽灵节点
+ * @param {string} content - Markdown 内容
+ * @param {Object} validLinks - 有效的链接集合 { concepts: Set, people: Set, summaries: Set, topics: Set }
+ * @param {Object} report - 报告对象，用于统计移除的无效链接数量
+ * @returns {string} 清理后的内容
+ */
+function validateAndCleanWikiLinks(content, validLinks, report = null) {
+  // 匹配 [[wikilink]] 格式
+  const wikilinkRegex = /\[\[([^\]]+)\]\]/g;
+  let removedCount = 0;
+  
+  const cleaned = content.replace(wikilinkRegex, (match, linkText) => {
+    const cleanName = linkText.trim();
+    
+    // 检查是否是有效的链接
+    const isValid = 
+      validLinks.concepts.has(cleanName) ||
+      validLinks.people.has(cleanName) ||
+      validLinks.summaries.has(cleanName) ||
+      validLinks.topics.has(cleanName);
+    
+    if (isValid) {
+      return match; // 保留有效链接
+    }
+    
+    // 无效链接：移除 wikilink 格式，只保留纯文本
+    removedCount++;
+    return cleanName;
+  });
+  
+  if (removedCount > 0 && report) {
+    report.invalidLinksRemoved += removedCount;
+  }
+  
+  return cleaned;
+}
+
+/**
+ * 构建有效的 wikilink 集合
+ */
+function buildValidLinksSet(wikiDir) {
+  const validLinks = {
+    concepts: new Set(),
+    people: new Set(),
+    summaries: new Set(),
+    topics: new Set()
+  };
+  
+  // 扫描 concepts 目录
+  const conceptsDir = path.join(wikiDir, 'concepts');
+  if (fs.existsSync(conceptsDir)) {
+    fs.readdirSync(conceptsDir).forEach(file => {
+      if (file.endsWith('.md')) {
+        validLinks.concepts.add(path.basename(file, '.md'));
+      }
+    });
+  }
+  
+  // 扫描 people 目录
+  const peopleDir = path.join(wikiDir, 'people');
+  if (fs.existsSync(peopleDir)) {
+    fs.readdirSync(peopleDir).forEach(file => {
+      if (file.endsWith('.md')) {
+        validLinks.people.add(path.basename(file, '.md'));
+      }
+    });
+  }
+  
+  // 扫描 summaries 目录
+  const summariesDir = path.join(wikiDir, 'summaries');
+  if (fs.existsSync(summariesDir)) {
+    fs.readdirSync(summariesDir).forEach(file => {
+      if (file.endsWith('.md')) {
+        validLinks.summaries.add(path.basename(file, '.md'));
+      }
+    });
+  }
+  
+  // 扫描 topics 目录
+  const topicsDir = path.join(wikiDir, 'topics');
+  if (fs.existsSync(topicsDir)) {
+    fs.readdirSync(topicsDir).forEach(file => {
+      if (file.endsWith('.md')) {
+        validLinks.topics.add(path.basename(file, '.md'));
+      }
+    });
+  }
+  
+  return validLinks;
+}
+
 async function compile(kbPath, options = {}) {
   const resolvedPath = kbPath ? path.resolve(kbPath) : resolveKbPath(options.path, options);
   const rawDir = path.join(resolvedPath, 'raw');
@@ -60,11 +153,14 @@ async function compile(kbPath, options = {}) {
   console.log(`\n⏱️ 预计时间: ${estimatedTime}-${estimatedTime * 2} 分钟（四阶段编译）`);
   console.log('📝 编译模式: 提取概念 → 撰写摘要 → 深入概念 → 主题聚合\n');
 
-  const report = { processed: 0, concepts: 0, people: 0, topics: 0, links: 0, cleaned: 0, issues: [] };
+  const report = { processed: 0, concepts: 0, people: 0, topics: 0, links: 0, cleaned: 0, issues: [], invalidLinksRemoved: 0 };
 
   // Track all extracted concepts for topic aggregation
   const allConcepts = [];
   const allSummaries = [];
+
+  // Build valid links set for wikilink validation (will be updated as we compile)
+  let validLinks = buildValidLinksSet(wikiDir);
 
   for (const item of toProcess) {
     const idx = toProcess.indexOf(item) + 1;
@@ -121,10 +217,12 @@ async function compile(kbPath, options = {}) {
         date: new Date().toISOString().split('T')[0]
       });
       const summaryResult = await callLLM(summaryPrompt);
-      const summaryContent = summaryResult.content || summaryResult;
+      let summaryContent = summaryResult.content || summaryResult;
+      
+      // Validate wikilinks in summary (before writing, concepts/people not yet created)
+      // We'll do a second pass after all concepts/people are created
       const summaryPath = path.join(summariesDir, `${filename}.md`);
-      writeMarkdownFile(summaryPath, summaryContent);
-      allSummaries.push({ filename, title: extractJson.title || filename, content: summaryContent });
+      allSummaries.push({ filename, title: extractJson.title || filename, content: summaryContent, path: summaryPath });
       console.log(`    ✓ 生成摘要: ${summaryContent.length} 字`);
 
       // Phase 3: Generate detailed concept files
@@ -140,9 +238,17 @@ async function compile(kbPath, options = {}) {
           sourceFilename: filename
         });
         const conceptResult = await callLLM(conceptPrompt);
-        const conceptContent = conceptResult.content || conceptResult;
+        let conceptContent = conceptResult.content || conceptResult;
+        
+        // Validate and clean wikilinks
+        conceptContent = validateAndCleanWikiLinks(conceptContent, validLinks, report);
+        
         writeMarkdownFile(path.join(conceptsDir, `${safeName}.md`), conceptContent);
         report.concepts++;
+        
+        // Update valid links set with newly created concept
+        validLinks.concepts.add(safeName);
+        
         console.log(`    ✓ 概念: ${concept.name} (${conceptContent.length} 字)`);
       }
 
@@ -159,13 +265,24 @@ async function compile(kbPath, options = {}) {
           sourceFilename: filename
         });
         const personResult = await callLLM(personPrompt);
-        const personContent = personResult.content || personResult;
+        let personContent = personResult.content || personResult;
+        
+        // Validate and clean wikilinks
+        personContent = validateAndCleanWikiLinks(personContent, validLinks, report);
+        
         writeMarkdownFile(path.join(peopleDir, `${safeName}.md`), personContent);
         report.people++;
+        
+        // Update valid links set with newly created person
+        validLinks.people.add(safeName);
+        
         console.log(`    ✓ 人物: ${person.name} (${personContent.length} 字)`);
       }
 
-      report.links += extractWikiLinks(summaryContent).length;
+      // Validate wikilinks in summary (now that concepts/people are created)
+      const validatedSummary = validateAndCleanWikiLinks(summaryContent, validLinks, report);
+      writeMarkdownFile(summaryPath, validatedSummary);
+      report.links += extractWikiLinks(validatedSummary).length;
       report.processed++;
 
       state.files[item.relPath] = {
@@ -235,7 +352,7 @@ async function compile(kbPath, options = {}) {
 
   autoCommitWiki(resolvedPath, `wiki: compile - ${report.processed} files, ${report.concepts} concepts, ${report.topics} topics`);
 
-  console.log(`\n✓ 编译完成!\n\n📋 编译报告\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n📥 输入统计\n  • 处理文件: ${report.processed} 个\n  • 跳过文件: ${changes.unchanged.length} 个 (未变更)\n  • 清洗脏数据: ${report.cleaned} 个\n\n📤 输出统计\n  • 生成摘要: ${report.processed} 篇\n  • 提取概念: ${report.concepts} 个\n  • 提取人物: ${report.people} 个\n  • 生成主题: ${report.topics} 个\n  • Wiki链接: ${report.links} 条\n\n⚠️ 问题发现\n  • 编译失败: ${report.issues.length} 个\n${report.issues.map(i => `  • ${i.file}: ${i.error}`).join('\n') || '  • 无'}\n\n💡 建议\n  • 请抽检 wiki/summaries/ 确认内容准确性\n  • 运行 wiki lint 进行深度质量检查\n  • 运行 wiki view 查看完整知识库\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n✓ 已自动提交Git`);
+  console.log(`\n✓ 编译完成!\n\n📋 编译报告\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n📥 输入统计\n  • 处理文件: ${report.processed} 个\n  • 跳过文件: ${changes.unchanged.length} 个 (未变更)\n  • 清洗脏数据: ${report.cleaned} 个\n\n📤 输出统计\n  • 生成摘要: ${report.processed} 篇\n  • 提取概念: ${report.concepts} 个\n  • 提取人物: ${report.people} 个\n  • 生成主题: ${report.topics} 个\n  • Wiki链接: ${report.links} 条\n  • 移除无效链接: ${report.invalidLinksRemoved} 个\n\n⚠️ 问题发现\n  • 编译失败: ${report.issues.length} 个\n${report.issues.map(i => `  • ${i.file}: ${i.error}`).join('\n') || '  • 无'}\n\n💡 建议\n  • 请抽检 wiki/summaries/ 确认内容准确性\n  • 运行 wiki lint 进行深度质量检查\n  • 运行 wiki view 查看完整知识库\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n✓ 已自动提交Git`);
 }
 
 function parseJsonFromLlmOutput(text) {
