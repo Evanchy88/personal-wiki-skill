@@ -264,11 +264,30 @@ description: |
      [2] 否，重新开始全量编译
      ```
 4. **扫描 raw/ 目录**（Bash）：`ls <kbPath>/raw/`
-5. **筛选待编译文件**：
+5. **文件格式转换**（CRITICAL）：
+   - 对于每个文件，检查文件扩展名：
+     - **.md, .txt, .csv, .json, .xml, .html**：直接使用 Read 工具读取
+     - **.epub, .pdf, .docx, .pptx, .xlsx, .mp3, .wav, .mp4**：**必须先转换为 Markdown**
+   
+   **转换方法**：
+   - **使用 `markitdown` 工具**（已安装的 skill）：
+     ```bash
+     # 单个文件转换
+     markitdown <file.epub> > <output.md>
+     
+     # 批量转换
+     for file in raw/*.epub raw/*.pdf raw/*.docx; do
+       markitdown "$file" > "raw/$(basename "$file" .${file##*.}).md"
+     done
+     ```
+   - 转换后将 .md 文件保存到 `raw/` 目录，原始文件保留
+   - 如果 `markitdown` 不可用，提示用户安装：`pip install markitdown` 或使用其他转换工具
+
+6. **筛选待编译文件**：
    - 如果是续编：跳过 `compileState.compiledFiles` 中已完成的文件
-   - 如果是全新编译：处理所有文件
-6. **统计文件数量**，决定编译策略：
-   - **1-3 个文件**：直接全部编译，设置 `batchSize = N`, `totalBatches = 1`，**编译完成后直接跳到步骤 10（全部完成）**
+   - 如果是全新编译：处理所有文件（包括转换后的 .md 文件）
+7. **统计文件数量**，决定编译策略：
+   - **1-3 个文件**：直接全部编译，设置 `batchSize = N`, `totalBatches = 1`，**编译完成后直接跳到步骤 11（全部完成）**
    - **4+ 个文件**：**先询问用户**（CRITICAL）：
      ```
      📊 发现 N 个文件需要编译，将分为 Y 批次处理（每批 3 个文件）
@@ -280,7 +299,7 @@ description: |
      请选择 (1/2):
      ```
    
-7. **根据用户选择执行**（CRITICAL - 必须在编译第一批前就获取用户选择）：
+8. **根据用户选择执行**（CRITICAL - 必须在编译第一批前就获取用户选择）：
    
    **用户选 1（自动全部）**：
    - 设置 `strategy.userChoice = 1`
@@ -294,13 +313,13 @@ description: |
      - 更新 `.kb-state.json`：`currentBatch++`, 更新 `compiledFiles` 和 `pendingFiles`
      - Git 提交：`git add . && git commit -m "wiki: compile batch X/Y"`
      - **只显示进度**（如"第 X/Y 批完成，M/N 文件已处理"），不停止
-   - 所有批次完成后，执行步骤 10（全部完成）
+   - 所有批次完成后，执行步骤 11（全部完成）
    
    **用户选 2（手动分批）**：
    - 设置 `strategy.userChoice = 2`
-   - 只编译第一批（1-3个文件），然后执行步骤 8
+   - 只编译第一批（1-3个文件），然后执行步骤 9
 
-8. **（仅当 userChoice = 2 时执行）第一批完成后，暂停并询问用户**：
+9. **（仅当 userChoice = 2 时执行）第一批完成后，暂停并询问用户**：
    - 计算总批次数：`总批次数 = Math.ceil(剩余数 / 3)`
    ```
    ✅ 第 1/M 批编译完成！
@@ -314,22 +333,22 @@ description: |
    请选择 (1/2):
    ```
    
-   **用户选 1**：更新 `userChoice = 1`，跳到步骤 9 继续循环
+   **用户选 1**：更新 `userChoice = 1`，跳到步骤 10 继续循环
    **用户选 2**：更新状态为 interrupted，等待下次续编
 
-9. **（循环编译逻辑 - 仅当 userChoice = 1 时执行）**：
-   - 对于剩余每一批：
-     - 读取该批文件内容（Read）
-     - 严格按照 prompt 模板生成条目
-     - 生成摘要 → `wiki/summaries/`
-     - 生成概念条目 → `wiki/concepts/`
-     - 生成人物条目 → `wiki/people/`
-     - 更新 `.kb-state.json`：`currentBatch++`, 更新 `compiledFiles` 和 `pendingFiles`, 更新 `stats`
-     - Git 提交：`git add . && git commit -m "wiki: compile batch X/Y"`
-     - **只显示进度**，不停止
-   - 所有批次完成后，执行步骤 10
+10. **（循环编译逻辑 - 仅当 userChoice = 1 时执行）**：
+    - 对于剩余每一批：
+      - 读取该批文件内容（Read）
+      - 严格按照 prompt 模板生成条目
+      - 生成摘要 → `wiki/summaries/`
+      - 生成概念条目 → `wiki/concepts/`
+      - 生成人物条目 → `wiki/people/`
+      - 更新 `.kb-state.json`：`currentBatch++`, 更新 `compiledFiles` 和 `pendingFiles`, 更新 `stats`
+      - Git 提交：`git add . && git commit -m "wiki: compile batch X/Y"`
+      - **只显示进度**，不停止
+    - 所有批次完成后，执行步骤 11
 
-10. **全部完成后**：
+11. **全部完成后**：
     - 生成 `wiki/index.md`
     - 设置 `compileState.status = "completed"`，清空 `compiledFiles`
     - Git 提交最终结果
