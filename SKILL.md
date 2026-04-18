@@ -59,7 +59,7 @@ description: 基于Karpathy理念的个人知识库编译器。AI直接研读文
    ```
 3. **创建配置**（Write）：
    - `.kb-config.json`: `{"defaultPath":"<kbPath>","llmModel":"qwen-plus"}`
-   - `.kb-state.json`: `{"version":1,"lastCompile":null,"files":{}}`
+   - `.kb-state.json`: `{"version":1,"lastCompile":null,"files":{},"compileState":{"status":"idle","compiledFiles":[],"totalFiles":0,"lastBatch":0}}`
    - `.gitignore`: `node_modules/\n.DS_Store`
 4. **初始化 Git**（Bash）：
    ```bash
@@ -96,47 +96,56 @@ description: 基于Karpathy理念的个人知识库编译器。AI直接研读文
 当用户请求 `wiki compile` 时：
 
 1. **读取编译规则**（Read）：`prompts/compile.md`, `concept.md`, `person.md`, `topics.md`
-2. **扫描 raw/ 目录**（Bash）：`ls <kbPath>/raw/`
-3. **统计文件数量**，决定编译策略：
+2. **读取编译状态**（Read）：`.kb-state.json`，检查 `compileState` 字段
+   - 如果 `compileState.status === "interrupted"`，提示用户：
+     ```
+     ⚠️ 检测到上次编译中断，剩余 X 个文件未处理
+     是否继续上次的进度？
+     [1] 是，继续上次中断的编译
+     [2] 否，重新开始全量编译
+     ```
+3. **扫描 raw/ 目录**（Bash）：`ls <kbPath>/raw/`
+4. **筛选待编译文件**：
+   - 如果是续编：跳过 `compileState.compiledFiles` 中已完成的文件
+   - 如果是全新编译：处理所有文件
+5. **统计文件数量**，决定编译策略：
    - **1-3 个文件**：直接全部编译
    - **4+ 个文件**：先编译第一批（1-3个），然后询问用户
 
-4. **编译第一批文件**（Read + Write）：
+6. **编译第一批文件**（Read + Write）：
    - 读取文件内容
    - 提取概念、人物、主题（生成 JSON）
    - 生成摘要 → `wiki/summaries/`
    - 生成概念条目 → `wiki/concepts/`
    - 生成人物条目 → `wiki/people/`
-5. **Git 提交第一批**（Bash）：`git add . && git commit -m "wiki: compile batch 1/X"`
+7. **更新编译状态**（Write）：
+   - 将已编译文件添加到 `compileState.compiledFiles`
+   - 设置 `compileState.status = "interrupted"`（如果未完成）或 `"completed"`（如果全部完成）
+   - 更新 `.kb-state.json`
+8. **Git 提交**（Bash）：`git add . && git commit -m "wiki: compile batch X/Y"`
 
-6. **如果文件 >3 个，暂停并询问用户**：
-   - 计算总批次数：`总批次数 = Math.ceil(N / 3)`
-   - 计算剩余批次：`剩余批次 = 总批次数 - 1`
+9. **如果还有待编译文件，暂停并询问用户**：
+   - 计算总批次数：`总批次数 = Math.ceil(剩余数 / 3)`
    ```
-   ✅ 第一批编译完成！（第 1/总批次数 批）
-   📊 进度: X/N 文件已处理
-   📋 已生成: A 概念, B 人物, C 摘要
+   ✅ 第 M/总批次数 批编译完成！
+   📊 总进度: X/N 文件已处理 (剩余 剩余批次 批)
+   📋 累计生成: A 概念, B 人物, C 摘要
    
    剩余 N-X 个文件，约 剩余批次 批。是否继续编译全部剩余文件？
    [1] 是，继续编译全部剩余文件
-   [2] 否，暂停，我稍后手动继续
+   [2] 否，暂停，我稍后继续（可随时通过 wiki compile 续编）
    
    请选择 (1/2):
    ```
 
-7. **根据用户选择**：
-   - 用户选 1 → 继续编译剩余所有文件，**每批完成后显示**：
-     ```
-     ✅ 第 M/总批次数 批编译完成！
-     📊 总进度: X/N 文件已处理 (剩余 剩余批次 批)
-     📋 累计生成: A 概念, B 人物, C 摘要
-     ```
-   - 用户选 2 → 暂停，显示当前状态
+10. **根据用户选择**：
+    - 用户选 1 → 继续编译剩余所有文件，每批完成后显示进度
+    - 用户选 2 → 设置 `compileState.status = "interrupted"`，保存状态，显示当前状态
 
-8. **全部完成后**：
-   - 生成 `wiki/index.md`
-   - 更新 `.kb-state.json`
-   - Git 提交最终结果
+11. **全部完成后**：
+    - 生成 `wiki/index.md`
+    - 设置 `compileState.status = "completed"`，清空 `compiledFiles`
+    - Git 提交最终结果
 
 **反馈格式**：
 ```
