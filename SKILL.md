@@ -18,7 +18,7 @@ description: |
 ### 安装位置
 将 `personal-wiki/` 目录放置到 AI 平台的 skills 目录：
 - **Qoder**: `~/.qoder/skills/personal-wiki/`
-- **Copaw**: `~/.lingma/skills/personal-wiki/`
+- **Copaw**: `~/.copaw/skill_pool/personal-wiki/`
 - **Claude**: `~/.claude/skills/personal-wiki/`
 - **Cursor**: `.cursor/skills/personal-wiki/`
 
@@ -199,29 +199,36 @@ description: |
 当用户请求 `wiki init [path]` 时：
 
 1. **确定路径**：从用户消息提取，或默认 `D:\knowledge-base`
-2. **创建目录**（Bash）：
+2. **检查路径是否已存在**：
+   - 如果 `<kbPath>/.kb-state.json` 已存在，提示用户：
+     ```
+     ⚠️ 该路径已存在知识库配置（.kb-state.json），如需重新初始化请先删除现有文件
+     路径: <kbPath>
+     ```
+   - 如果路径不存在，继续执行
+3. **创建目录**（Bash）：
    ```bash
    mkdir -p <kbPath>/raw <kbPath>/wiki/{summaries,concepts,people,topics,methods,findings,events,techniques}
    ```
-3. **创建配置**（Write）：
+4. **创建配置**（Write）：
    - `.kb-config.json`: `{"defaultPath":"<kbPath>","llmModel":"qwen-plus"}`
    - `.kb-state.json`: `{"version":1,"lastCompile":null,"files":{},"compileState":{"status":"idle","compiledFiles":[],"totalFiles":0,"lastBatch":0}}`
    - `.gitignore`: `node_modules/\n.DS_Store`
-4. **初始化 Git**（Bash）：
+5. **初始化 Git**（Bash）：
    ```bash
    cd <kbPath> && git init
    ```
-5. **检查 Git 身份**（Bash）：
+6. **检查 Git 身份**（Bash）：
    ```bash
    git config user.name && git config user.email
    ```
    - ✅ 已配置 → 直接提交
    - ❌ 未配置 → 用 `git -c user.name="wiki-user" -c user.email="wiki@local"` 提交（本地提交不需要真实身份）
-6. **Git 提交**（Bash）：
+7. **Git 提交**（Bash）：
    ```bash
    cd <kbPath> && git add . && git commit -m "wiki: init"
    ```
-7. **不要求配置远程**：远程推送是可选的，后续用户可通过 `wiki git remote setup` 配置
+8. **不要求配置远程**：远程推送是可选的，后续用户可通过 `wiki git remote setup` 配置
 
 **反馈格式**：
 ```
@@ -241,8 +248,14 @@ description: |
 
 当用户请求 `wiki compile` 时：
 
-1. **读取编译规则**（Read）：`prompts/compile.md`, `concept.md`, `person.md`, `topics.md`
-2. **读取编译状态**（Read）：`.kb-state.json`，检查 `compileState` 字段
+1. **检查前置条件**：
+   - 检查 `.kb-state.json` 是否存在：
+     - 如果不存在，先执行 `wiki init` 初始化（或提示用户先运行 `wiki init`）
+   - 检查 `raw/` 目录是否为空：
+     - 如果为空，提示用户：`raw/ 目录为空，请先将文章保存到 raw/ 目录`
+     - 如果不为空，继续执行
+2. **读取编译规则**（Read）：`prompts/compile.md`, `concept.md`, `person.md`, `topics.md`
+3. **读取编译状态**（Read）：`.kb-state.json`，检查 `compileState` 字段
    - 如果 `compileState.status === "interrupted"`，提示用户：
      ```
      ⚠️ 检测到上次编译中断，剩余 X 个文件未处理
@@ -250,15 +263,15 @@ description: |
      [1] 是，继续上次中断的编译
      [2] 否，重新开始全量编译
      ```
-3. **扫描 raw/ 目录**（Bash）：`ls <kbPath>/raw/`
-4. **筛选待编译文件**：
+4. **扫描 raw/ 目录**（Bash）：`ls <kbPath>/raw/`
+5. **筛选待编译文件**：
    - 如果是续编：跳过 `compileState.compiledFiles` 中已完成的文件
    - 如果是全新编译：处理所有文件
-5. **统计文件数量**，决定编译策略：
+6. **统计文件数量**，决定编译策略：
    - **1-3 个文件**：直接全部编译，设置 `batchSize = N`, `totalBatches = 1`
    - **4+ 个文件**：先编译第一批（1-3个），设置 `batchSize = 3`, `totalBatches = Math.ceil(总数 / 3)`
 
-6. **编译第一批文件**（Read + Write）：
+7. **编译第一批文件**（Read + Write）：
    - 读取文件内容
    - 提取概念、人物、主题（生成 JSON）
    - 生成摘要 → `wiki/summaries/`
@@ -313,15 +326,18 @@ description: |
    ```
 
 10. **根据用户选择**（关键：必须保存用户选择）：
-    - **用户选 1**：
+    - **用户选 1（继续全部）**：
       - 更新 `.kb-state.json`：`strategy.userChoice = 1`
-      - 继续编译剩余所有文件，每批完成后：
+      - **AI 自动循环编译所有剩余批次，不再询问用户**。每批完成后：
         - `strategy.currentBatch++`
         - 更新 `compiledFiles` 和 `pendingFiles`
         - 更新 `stats` 统计
         - 写入 `.kb-state.json`
-    
-    - **用户选 2**：
+        - **只显示当前进度**（如"第 M/Y 批完成，X/N 文件已处理"），不再弹出选择提示
+        - 继续下一批，直到全部完成或出错
+      - 全部完成后，执行第 11 步
+
+    - **用户选 2（暂停）**：
       - 更新 `.kb-state.json`：
         - `status = "interrupted"`
         - `strategy.userChoice = 2`
@@ -354,24 +370,15 @@ description: |
 当用户请求 `wiki status` 或询问编译进度时：
 
 1. **读取编译状态**（Read）：`.kb-state.json`
-2. **检查是否有中断的编译**：
-   - 如果 `compileState.status === "interrupted"`，**必须提示用户**：
-     ```
-     ⚠️ 检测到上次编译中断，还有 X 个文件未处理
-     
-     已编译: Y 个文件
-     待编译: X 个文件
-     
-     是否继续编译剩余文件？
-     [1] 是，继续编译
-     [2] 否，只查看状态
-     
-     请选择 (1/2):
-     ```
-3. **显示统计信息**：
+   - 如果 `.kb-state.json` 不存在，显示"知识库未初始化，请先运行 `wiki init`"
+2. **显示完整统计信息**：
    - 文件总数、已编译数、待编译数
    - 概念总数、人物总数、主题总数
    - 最后编译时间
+   - 如果 `compileState.status === "interrupted"`，在统计信息末尾提示：
+     ```
+     💡 检测到上次编译中断，如需继续编译，请运行 `wiki compile`
+     ```
 
 **反馈格式**：
 ```
@@ -402,9 +409,13 @@ description: |
 
 当用户请求 `wiki qa "问题"` 时：
 
-1. **扫描 wiki/ 目录**（Bash）：`ls <kbPath>/wiki/concepts/`
-2. **匹配并读取文件**（Read）：根据问题关键词读取相关 .md 文件
-3. **基于内容回答**：严格基于 wiki/ 内容，列出参考来源
+1. **检查前置条件**：
+   - 检查 `wiki/` 目录是否存在：
+     - 如果不存在，提示用户：`知识库尚未编译，请先运行 wiki compile 生成知识条目`
+     - 如果存在，继续执行
+2. **扫描 wiki/ 目录**（Bash）：`ls <kbPath>/wiki/concepts/`
+3. **匹配并读取文件**（Read）：根据问题关键词读取相关 .md 文件
+4. **基于内容回答**：严格基于 wiki/ 内容，列出参考来源
 
 **反馈格式**：
 ```
