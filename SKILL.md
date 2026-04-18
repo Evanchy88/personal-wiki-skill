@@ -721,6 +721,355 @@ AI: ❌ 知识库中暂无关于"BERT的预训练任务"的内容。
     💡 建议: 将相关文章保存到 raw/ 目录，然后运行 wiki compile
 ```
 
+## 全功能执行反馈规范（必须遵守）
+
+**所有 wiki 命令在执行时都必须提供清晰、可视化的进度反馈**。以下是每个命令的标准反馈格式。
+
+### 1. wiki init（初始化知识库）
+
+```
+用户: wiki init
+
+AI: 📚 personal-wiki 知识库编译器
+    这个Skill可以帮你：
+    1. 📥 收集原始文章到 raw/ 目录
+    2. 🤖 AI自动研读并生成结构化笔记到 wiki/ 目录
+    3. 💬 基于笔记进行深度问答学习
+
+    📍 首先，知识库保存在哪个目录？
+    [1] D:\knowledge-base (推荐)
+    [2] 自定义路径
+
+    请选择 (1/2) 或直接输入路径:
+
+用户: 1
+
+AI: 🔄 初始化知识库...
+    📍 创建目录结构...
+      ✅ knowledge-base/raw/
+      ✅ knowledge-base/wiki/summaries/
+      ✅ knowledge-base/wiki/concepts/
+      ✅ knowledge-base/wiki/people/
+      ✅ knowledge-base/wiki/topics/
+    📍 初始化Git仓库...
+      ✓ git init 成功
+    📍 创建配置文件...
+      ✅ .kb-config.json
+      ✅ .kb-state.json
+
+    ✅ 知识库初始化完成！
+    📂 路径: D:\knowledge-base
+    
+    💡 下一步:
+      • 将文章保存到 raw/ 目录
+      • 运行 wiki compile 开始编译
+```
+
+### 2. wiki clean（清洗脏数据）
+
+```
+用户: wiki clean article.md
+
+AI: 🔄 清洗脏数据...
+    📍 读取文件...
+      ✅ article.md (45KB)
+    📍 检测脏数据...
+      ⚠️ 发现 HTML 标签残留
+      ⚠️ 发现乱码字符
+      ⚠️ 发现空段落
+    📍 清洗数据...
+      ✅ 移除 HTML 标签 (12 处)
+      ✅ 修复乱码 (8 处)
+      ✅ 合并空段落 (5 处)
+    📍 保存清洗后文件...
+      ✅ article.md (42KB, 减少 3KB)
+
+    ✅ 数据清洗完成！
+    📊 清洗统计:
+      • 处理文件: 1 个
+      • 移除 HTML: 12 处
+      • 修复乱码: 8 处
+      • 合并段落: 5 处
+```
+
+### 3. wiki lint（质量检查）
+
+```
+用户: wiki lint
+
+AI: 🔄 质量检查...
+    📍 扫描 wiki/ 目录...
+      ✅ 发现 45 个文件
+        • summaries: 12 篇
+        • concepts: 24 个
+        • people: 6 个
+        • topics: 3 个
+
+    📍 检查断裂链接...
+      ✅ 检查 156 个 wikilink
+      ⚠️ 发现 3 个断裂链接:
+        • [[机器学习基础]] (wiki/concepts/深度学习.md)
+        • [[Vaswani]] (wiki/concepts/Attention.md)
+        • [[强化学习]] (wiki/topics/AI.md)
+      📍 自动创建空概念文件...
+        ✅ wiki/concepts/机器学习基础.md
+        ✅ wiki/people/Vaswani.md
+        ✅ wiki/concepts/强化学习.md
+
+    📍 检查孤立概念...
+      ✅ 所有概念文件均被引用
+
+    📍 检查覆盖度...
+      ⚠️ 发现 2 个概念文件过于简略 (<100字):
+        • wiki/concepts/正则化.md (68字)
+        • wiki/concepts/损失函数.md (82字)
+      📍 自动扩展概念...
+        ✅ 正则化.md (68字 → 320字)
+        ✅ 损失函数.md (82字 → 280字)
+
+    📍 检查时效性...
+      📅 发现 1 个文档超过6个月未更新:
+        • wiki/concepts/RNN.md (最后更新: 2025-09-15)
+
+    ✅ 质量检查完成！
+    📋 检查报告
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    📊 文件统计
+      • 总文件: 45 个
+      • 总wikilink: 156 条
+    
+    ⚠️ 问题发现
+      • 断裂链接: 3 个 (已自动修复)
+      • 孤立概念: 0 个
+      • 覆盖度不足: 2 个 (已自动扩展)
+      • 时效性警告: 1 个
+    
+    💡 建议
+      • 请检查新创建的空概念文件并补充内容
+      • 考虑更新 RNN.md 以反映最新进展
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+### 4. wiki qa（问答）
+
+```
+用户: wiki qa "Transformer和RNN的区别是什么？"
+
+AI: 📚 正在从知识库中检索...
+    📍 匹配概念...
+      ✅ transformer (wiki/concepts/Transformer.md)
+      ✅ rnn (wiki/concepts/RNN.md)
+      ✅ 注意力机制 (wiki/concepts/注意力机制.md)
+    📍 匹配文章...
+      ✅ article-attention.md (相关度: 92%)
+      ✅ paper-transformer.md (相关度: 88%)
+      ✅ research-llm.md (相关度: 75%)
+      ✅ old-article.md (相关度: 60%)
+
+    💡 基于知识库的回答:
+
+    Transformer 和 RNN 是两种不同的序列建模架构，主要区别如下：
+
+    **1. 处理方式**
+    - RNN: 顺序处理，每一步依赖上一步的隐藏状态
+    - Transformer: 并行处理，通过自注意力机制同时处理所有位置
+
+    **2. 长距离依赖**
+    - RNN: 长距离信息传递困难，存在梯度消失问题
+    - Transformer: 自注意力机制直接建模任意位置间的依赖关系
+
+    **3. 训练效率**
+    - RNN: 无法并行化，训练速度慢
+    - Transformer: 完全并行化，训练效率高
+
+    **4. 应用场景**
+    - RNN: 适合实时流式处理、语音识别
+    - Transformer: 适合机器翻译、文本生成、图像理解
+
+    📖 参考来源:
+      • wiki/concepts/Transformer.md
+      • wiki/concepts/RNN.md
+      • wiki/concepts/注意力机制.md
+      • wiki/summaries/article-attention.md
+```
+
+**无内容时**：
+```
+用户: wiki qa "BERT的预训练任务是什么？"
+
+AI: 📚 正在从知识库中检索...
+    📍 匹配概念...
+      ❌ 未找到 BERT 相关概念
+    📍 匹配文章...
+      ❌ 未找到 BERT 相关文章
+
+    ❌ 知识库中暂无关于"BERT的预训练任务"的内容。
+    
+    💡 建议:
+      • 将 BERT 相关文章保存到 raw/ 目录
+      • 运行 wiki compile 进行编译
+      • 重新提问
+```
+
+### 5. wiki status（查看状态）
+
+```
+用户: wiki status
+
+AI: 📊 知识库状态
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    📂 基本信息
+      • 路径: D:\knowledge-base
+      • 最后编译: 2026-04-18 17:30
+      • Git 分支: main
+      • 最新提交: wiki: compile - 7 files, 24 concepts, 6 topics
+    
+    📥 raw/ 目录
+      • 文件数: 8 个
+      • 总大小: 456 KB
+      • 支持格式: md(5), pdf(2), epub(1)
+    
+    📤 wiki/ 目录
+      • summaries: 12 篇
+      • concepts: 24 个
+      • people: 6 个
+      • topics: 3 个
+      • methods: 5 个
+      • findings: 8 个
+      • 总wikilink: 156 条
+    
+    📈 编译统计
+      • 已编译: 7 个文件
+      • 未编译: 1 个文件
+      • 脏数据: 0 个
+      • 断裂链接: 0 个
+    
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+### 6. wiki view（查看知识库）
+
+```
+用户: wiki view
+
+AI: 📖 知识库索引
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    ## 核心主题
+    - [[深度学习]] - 神经网络在复杂模式识别中的应用
+    - [[自然语言处理]] - AI处理和理解人类语言的技术
+    - [[强化学习]] - 通过奖励机制学习最优策略
+    - [[计算机视觉]] - 让机器理解和生成图像
+    
+    ## 文章摘要
+    - [[article-attention]] - 注意力机制在序列模型中的应用
+    - [[paper-transformer]] - Attention Is All You Need 论文解读
+    - [[news-ai-regulation]] - AI监管政策最新动态
+    - [[tutorial-pytorch]] - PyTorch实战教程
+    - [[research-llm]] - 大语言模型研究综述
+    
+    ## 概念
+    - [[注意力机制]], [[Transformer]], [[Self-Attention]], [[Multi-Head Attention]]
+    - [[Positional Encoding]], [[Layer Normalization]], [[Residual Connection]]
+    - [[RNN]], [[LSTM]], [[GRU]], [[CNN]]
+    - ... (共24个概念)
+    
+    ## 人物
+    - [[Vaswani]] - Transformer论文第一作者
+    - [[Bahdanau]] - 注意力机制提出者
+    - [[Ilya Sutskever]] - OpenAI联合创始人
+    - ... (共6个人物)
+    
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    💡 提示:
+      • 点击链接可查看详细内容
+      • 运行 wiki qa "问题" 进行深度问答
+```
+
+### 7. wiki git（Git操作）
+
+```
+用户: wiki git log
+
+AI: 📜 Git 历史记录
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    * abc1234 (HEAD -> main) - 2026-04-18 17:30
+      wiki: compile - 7 files, 24 concepts, 6 topics
+      作者: AI Assistant
+    
+    * def5678 - 2026-04-17 14:20
+      wiki: compile - 3 files, 8 concepts, 2 topics
+      作者: AI Assistant
+    
+    * ghi9012 - 2026-04-16 10:15
+      wiki: init - 初始化知识库
+      作者: User
+    
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    💡 提示:
+      • 运行 wiki rollback <commit> 回滚到指定版本
+      • 运行 wiki git diff <commit> 查看变更详情
+```
+
+### 8. wiki remote（远程同步）
+
+```
+用户: wiki remote sync
+
+AI: 🔄 同步远程变更...
+    📍 检查远程仓库...
+      ✅ origin: https://github.com/user/knowledge-base.git
+    📍 拉取远程变更...
+      ✅ 发现 2 个新提交
+      • abc1234: wiki: compile - 3 files, 8 concepts
+      • def5678: Update article-attention.md
+    📍 合并变更...
+      ✅ 自动合并成功
+      • 更新文件: 3 个
+      • 新增文件: 8 个
+    
+    ✅ 同步完成！
+    📊 同步统计:
+      • 拉取提交: 2 个
+      • 更新文件: 3 个
+      • 新增文件: 8 个
+      • 冲突: 0 个
+```
+
+### 9. wiki kb（多知识库管理）
+
+```
+用户: wiki kb list
+
+AI: 📚 已注册的知识库
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    * ai-notes (默认)
+      路径: D:\knowledge-base\ai
+      文件数: 45 个
+      最后编译: 2026-04-18 17:30
+    
+    * code-notes
+      路径: D:\knowledge-base\code
+      文件数: 28 个
+      最后编译: 2026-04-17 10:20
+    
+    * research
+      路径: D:\knowledge-base\research
+      文件数: 67 个
+      最后编译: 2026-04-16 15:45
+    
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    💡 提示:
+      • 运行 wiki kb switch <name> 切换默认知识库
+      • 运行 wiki compile --kb <name> 编译指定知识库
+```
+
 ## 风险控制
 
 | 风险 | 应对 |
