@@ -1,9 +1,43 @@
 ---
 name: personal-wiki
-description: 基于Karpathy理念的个人知识库编译器。AI直接研读文章并整理成结构化的知识体系，无需调用外部LLM API。
+description: |
+  个人知识库编译器。当用户提到以下任何内容时自动触发：
+  - "wiki init"、"wiki compile"、"wiki status"、"wiki qa"、"wiki lint" 等 wiki 命令
+  - 知识库编译、编译进度、断点续传、继续编译
+  - raw/ 目录、wiki/ 目录、知识条目、概念提取、人物条目
+  - .kb-state.json、编译状态、中断恢复
+  功能：AI 直接研读文章并整理成结构化知识体系，支持分批编译、断点续传、Git 版本控制。
 ---
 
 # personal-wiki
+
+## 跨平台使用说明
+
+**本 Skill 符合 Agent Skills 开放标准**，可在 Qoder、Copaw、Claude、Cursor 等所有支持 SKILL.md 的 AI 平台运行。
+
+### 安装位置
+将 `personal-wiki/` 目录放置到 AI 平台的 skills 目录：
+- **Qoder**: `~/.qoder/skills/personal-wiki/`
+- **Copaw**: `~/.lingma/skills/personal-wiki/`
+- **Claude**: `~/.claude/skills/personal-wiki/`
+- **Cursor**: `.cursor/skills/personal-wiki/`
+
+### 触发方式
+当用户输入包含以下关键词时，AI **自动加载并执行**本 Skill：
+- `wiki init [path]` → 初始化知识库
+- `wiki compile` → 编译知识库（支持断点续传）
+- `wiki status` → 查看编译进度
+- `wiki qa "问题"` → 检索知识库
+- `wiki lint` → 质量检查
+- 或者提到"知识库编译"、"编译进度"、"继续编译"等
+
+### 核心原则
+1. **AI 作为编译引擎**：不再调用外部脚本，AI 亲自读取、分析、生成
+2. **强制状态检查**：任何操作前必须先读取 `.kb-state.json`
+3. **断点续传**：支持中断后恢复，保留完整编译策略上下文
+4. **Git 版本控制**：每次编译自动提交
+
+---
 
 基于Karpathy理念的个人知识库编译器。**你（AI）直接作为编译引擎**，研读用户收集的文章，整理成结构化的知识体系。
 
