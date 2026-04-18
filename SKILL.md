@@ -49,78 +49,126 @@ description: 基于Karpathy理念的个人知识库编译器。AI直接研读文
 
 **每个命令都必须按以下步骤实际执行，不能只输出文本而不执行操作**：
 
+### 重要：路径和工具说明
+
+**Skill 文件位置**：
+- SKILL.md 位于：`d:\Qoder\personal-wiki-skill\SKILL.md`（或 `C:\Users\admin\.qoder\skills\personal-wiki\SKILL.md`）
+- Prompt 模板位于：`d:\Qoder\personal-wiki-skill\prompts\` 目录下
+- **你必须使用绝对路径读取 prompt 文件**
+
+**知识库路径获取**：
+- 用户会在消息中指定路径，例如：`D:\Wiki\读书`
+- 如果用户没有指定，使用默认路径：`D:\knowledge-base`
+- **你必须验证路径是否存在**，如果不存在则创建
+
+**执行工具**：
+- 创建目录：使用 `Bash` 工具的 `mkdir -p` 命令
+- 写入文件：使用 `Write` 工具
+- 读取文件：使用 `Read` 工具
+- Git 操作：使用 `Bash` 工具的 `git` 命令
+- 扫描目录：使用 `Bash` 工具的 `ls` 或 `find` 命令
+
 ### wiki init（初始化知识库）- 必须执行的步骤
 
 当用户请求 `wiki init [path]` 时，**你必须按顺序执行以下操作**：
 
-1. **创建目录结构**（使用 Bash 命令）：
+1. **确定知识库路径**：
+   - 从用户消息中提取路径（如 `D:\Wiki\读书`）
+   - 如果用户没有指定，使用 `D:\knowledge-base`
+   - 验证路径格式是否合法
+
+2. **创建目录结构**（使用 Bash 命令，**必须实际执行**）：
    ```bash
-   mkdir -p <path>/raw
-   mkdir -p <path>/wiki/summaries
-   mkdir -p <path>/wiki/concepts
-   mkdir -p <path>/wiki/people
-   mkdir -p <path>/wiki/topics
-   mkdir -p <path>/wiki/methods
-   mkdir -p <path>/wiki/findings
-   mkdir -p <path>/wiki/events
-   mkdir -p <path>/wiki/techniques
+   mkdir -p <kbPath>/raw
+   mkdir -p <kbPath>/wiki/summaries
+   mkdir -p <kbPath>/wiki/concepts
+   mkdir -p <kbPath>/wiki/people
+   mkdir -p <kbPath>/wiki/topics
+   mkdir -p <kbPath>/wiki/methods
+   mkdir -p <kbPath>/wiki/findings
+   mkdir -p <kbPath>/wiki/events
+   mkdir -p <kbPath>/wiki/techniques
+   ```
+   
+   **示例**（如果用户指定 `D:\Wiki\读书`）：
+   ```bash
+   mkdir -p "D:\Wiki\读书/raw"
+   mkdir -p "D:\Wiki\读书/wiki/summaries"
+   # ... 其他目录
    ```
 
-2. **初始化 Git 仓库**（使用 Bash 命令）：
+3. **初始化 Git 仓库**（使用 Bash 命令，**必须实际执行**）：
    ```bash
-   cd <path>
+   cd "<kbPath>"
    git init
    ```
 
-3. **创建配置文件**（写入文件）：
-   - `.kb-config.json`: 写入默认配置
-   - `.kb-state.json`: 写入初始状态
-
-4. **创建 .gitignore**（写入文件）：
+4. **创建配置文件**（使用 Write 工具，**必须实际写入文件**）：
+   
+   **`.kb-config.json`**：
+   ```json
+   {
+     "defaultPath": "<kbPath>",
+     "llmModel": "qwen-plus"
+   }
+   ```
+   
+   **`.kb-state.json`**：
+   ```json
+   {
+     "version": 1,
+     "lastCompile": null,
+     "files": {}
+   }
+   ```
+   
+   **`.gitignore`**：
    ```
    node_modules/
    .DS_Store
    ```
 
-5. **Git 提交初始结构**（使用 Bash 命令）：
+5. **Git 提交初始结构**（使用 Bash 命令，**必须实际执行**）：
    ```bash
+   cd "<kbPath>"
    git add .
    git commit -m "wiki: init - 初始化知识库结构"
    ```
 
-**反馈示例**：
+**完整执行示例**（用户输入 `D:\Wiki\读书`）：
+
 ```
-📚 personal-wiki 知识库编译器
+用户: 我打算在 D:\Wiki\读书 构建我的第一个知识库
+
+AI: 📚 personal-wiki 知识库编译器
     这个Skill可以帮你：
     1. 📥 收集原始文章到 raw/ 目录
     2. 🤖 AI自动研读并生成结构化笔记到 wiki/ 目录
     3. 💬 基于笔记进行深度问答学习
 
-    📍 首先，知识库保存在哪个目录？
-    [1] D:\knowledge-base (推荐)
-    [2] 自定义路径
+    📍 确认知识库路径: D:\Wiki\读书
+    开始初始化? [Y/n]
 
-    请选择 (1/2) 或直接输入路径:
-
-用户: 1
+用户: Y
 
 AI: 🔄 初始化知识库...
     📍 创建目录结构...
-      ✅ D:\knowledge-base/raw/
-      ✅ D:\knowledge-base/wiki/summaries/
-      ✅ D:\knowledge-base/wiki/concepts/
-      ✅ D:\knowledge-base/wiki/people/
-      ✅ D:\knowledge-base/wiki/topics/
+      ✅ D:\Wiki\读书/raw/
+      ✅ D:\Wiki\读书/wiki/summaries/
+      ✅ D:\Wiki\读书/wiki/concepts/
+      ✅ D:\Wiki\读书/wiki/people/
+      ✅ D:\Wiki\读书/wiki/topics/
     📍 初始化Git仓库...
-      ✓ git init 成功
+      ✓ git init 成功 (D:\Wiki\读书)
     📍 创建配置文件...
       ✅ .kb-config.json
       ✅ .kb-state.json
+      ✅ .gitignore
     📍 Git 提交...
       ✓ Commit: abc1234 (wiki: init - 初始化知识库结构)
 
     ✅ 知识库初始化完成！
-    📂 路径: D:\knowledge-base
+    📂 路径: D:\Wiki\读书
     
     💡 下一步:
       • 将文章保存到 raw/ 目录
