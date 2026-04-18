@@ -273,6 +273,11 @@ description: |
 
 7. **编译第一批文件**（Read + Write）：
    - 读取文件内容
+   - **严格按照 prompt 模板生成条目**（CRITICAL）：
+     - 概念条目：必须完全遵循 `prompts/concept.md` 的章节结构和格式，包括所有 emoji 和章节名
+     - 人物条目：必须完全遵循 `prompts/person.md` 的章节结构和格式，包括所有 emoji 和章节名
+     - **禁止自由发挥**：不要修改章节名称、不要省略章节、不要用列表代替表格
+     - 如果某些章节信息有限，保留章节标题并基于已有信息做最大化总结
    - 提取概念、人物、主题（生成 JSON）
    - 生成摘要 → `wiki/summaries/`
    - 生成概念条目 → `wiki/concepts/`
