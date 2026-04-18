@@ -95,11 +95,6 @@ description: 基于Karpathy理念的个人知识库编译器。AI直接研读文
 
 当用户请求 `wiki compile` 时：
 
-**性能提示**：
-- 推荐使用 `qwen-plus` 模型（平衡速度和质量）
-- 避免使用 `qwen-max` 或开启深度思考的模型，会显著增加延迟
-- 长文档（>1万字）建议单批只处理 1 个文件
-
 1. **读取编译规则**（Read）：`prompts/compile.md`, `concept.md`, `person.md`, `topics.md`
 2. **读取编译状态**（Read）：`.kb-state.json`，检查 `compileState` 字段
    - 如果 `compileState.status === "interrupted"`，提示用户：
