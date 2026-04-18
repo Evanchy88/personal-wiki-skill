@@ -264,22 +264,53 @@ description: |
      [2] 否，重新开始全量编译
      ```
 4. **扫描 raw/ 目录**（Bash）：`ls <kbPath>/raw/`
-5. **文件格式转换**（CRITICAL - 必须严格执行）：
+5. **文件格式转换**（CRITICAL - 必须严格执行，禁止自由发挥）：
+   
+   **⚠️ 绝对禁止行为**：
+   - ❌ **禁止使用 Python 脚本**提取 EPUB 内容（ebooklib, beautifulsoup 等）
+   - ❌ **禁止自定义转换逻辑**或编写提取脚本
+   - ❌ **禁止基于"已知知识"编译**（必须基于文件实际内容）
+   - ❌ **禁止跳过文件转换**（必须转换后才能编译）
+   
+   **强制转换流程**：
    - 扫描 raw/ 目录，识别所有**非 Markdown 格式**的文件：
      - **需要转换的格式**：.epub, .pdf, .docx, .pptx, .xlsx, .mp3, .wav, .mp4
      - **可直接读取的格式**：.md, .txt, .csv, .json, .xml, .html
    
-   **转换规则**（CRITICAL）：
-   - **必须使用 `markitdown` 工具**，禁止使用其他 Python 库或自定义脚本
-   - 如果 markitdown 未安装，**停止编译并提示用户**：`请先安装 markitdown: pip install markitdown`
+   **转换工具**（CRITICAL）：
+   - **唯一允许的工具**：`markitdown` CLI
    - 转换命令：
      ```bash
-     # 转换单个 EPUB
-     markitdown "raw/file.epub" > "raw/file.md"
+     # 转换单个文件
+     markitdown "raw/file.epub" -o "raw/file.md"
      
-     # 批量转换所有非 .md 文件
+     # 批量转换
      markitdown "raw/*.epub" "raw/*.pdf" "raw/*.docx" 2>/dev/null || true
      ```
+   
+   **错误处理**（CRITICAL）：
+   - 如果 markitdown 转换失败（返回非 0 退出码）：
+     1. **重试一次**（可能是临时错误）
+     2. 如果仍失败，**立即停止编译并提示用户**：
+        ```
+        ❌ 文件转换失败：file.epub
+        可能原因：
+        1. 文件损坏或加密
+        2. 文件格式不支持
+        3. markitdown 版本问题
+        
+        请尝试：
+        - 手动转换：markitdown file.epub -o file.md
+        - 检查文件是否损坏
+        - 更新 markitdown: pip install --upgrade markitdown
+        ```
+   - **绝对不要**在转换失败后自行编写脚本提取内容
+   
+   **转换后验证**：
+   - 检查生成的 .md 文件是否有内容（文件大小 > 0）
+   - 读取前 100 行确认编码正确（中文正常显示）
+   - 如果编码错误（乱码），**提示用户**而非自行处理
+   
    - 转换后的 .md 文件保存在 `raw/` 目录，与原始文件同名但扩展名为 .md
    - **转换完成后，重新扫描 raw/ 目录**，获取所有 .md 文件列表（包括刚转换出来的）
    
