@@ -45,14 +45,29 @@ function isMarkdownFile(filePath) {
  */
 function convertWithMarkitdown(filePath) {
   try {
-    // 尝试使用 markitdown CLI
-    const result = execSync(`npx -y markitdown "${filePath}"`, {
+    // 优先使用全局安装的 markitdown CLI
+    const result = execSync(`markitdown "${filePath}"`, {
       encoding: 'utf-8',
-      maxBuffer: 50 * 1024 * 1024 // 50MB buffer
+      maxBuffer: 200 * 1024 * 1024, // 200MB buffer for large EPUBs
+      stdio: ['pipe', 'pipe', 'pipe']
     });
     return result;
   } catch (e) {
-    console.log(`  ⚠️ markitdown 转换失败: ${e.message}`);
+    // 如果 markitdown CLI 失败，尝试 npx
+    if (e.message && e.message.includes('markitdown')) {
+      try {
+        const result = execSync(`npx -y markitdown "${filePath}"`, {
+          encoding: 'utf-8',
+          maxBuffer: 200 * 1024 * 1024,
+          stdio: ['pipe', 'pipe', 'pipe']
+        });
+        return result;
+      } catch (e2) {
+        console.log(`  ⚠️ markitdown 转换失败: ${e2.stderr || e2.message}`);
+        return null;
+      }
+    }
+    console.log(`  ⚠️ markitdown 转换失败: ${e.stderr || e.message}`);
     return null;
   }
 }
