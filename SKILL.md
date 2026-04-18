@@ -30,9 +30,22 @@ description: 基于Karpathy理念的个人知识库编译器。AI直接研读文
    {
      "compileState": {
        "status": "idle" | "interrupted" | "completed",
-       "compiledFiles": ["file1.md", "file2.epub"],
-       "totalFiles": 14,
-       "lastBatch": 12
+       "strategy": {
+         "batchSize": 3,           // 每批编译文件数
+         "userChoice": 1,          // 用户选择：1=继续全部，2=暂停
+         "totalBatches": 5,        // 总批次数
+         "currentBatch": 2         // 当前进行到第几批
+       },
+       "compiledFiles": ["file1.md", "file2.epub"],  // 已完成的文件列表
+       "pendingFiles": ["file3.md", "file4.epub"],   // 待编译文件列表
+       "totalFiles": 14,           // 文件总数
+       "lastBatch": 2,             // 最后一批编号
+       "stats": {                  // 统计信息
+         "concepts": 25,
+         "people": 42,
+         "topics": 3,
+         "summaries": 1
+       }
      }
    }
    ```
@@ -197,8 +210,8 @@ description: 基于Karpathy理念的个人知识库编译器。AI直接研读文
    - 如果是续编：跳过 `compileState.compiledFiles` 中已完成的文件
    - 如果是全新编译：处理所有文件
 5. **统计文件数量**，决定编译策略：
-   - **1-3 个文件**：直接全部编译
-   - **4+ 个文件**：先编译第一批（1-3个），然后询问用户
+   - **1-3 个文件**：直接全部编译，设置 `batchSize = N`, `totalBatches = 1`
+   - **4+ 个文件**：先编译第一批（1-3个），设置 `batchSize = 3`, `totalBatches = Math.ceil(总数 / 3)`
 
 6. **编译第一批文件**（Read + Write）：
    - 读取文件内容
@@ -206,10 +219,38 @@ description: 基于Karpathy理念的个人知识库编译器。AI直接研读文
    - 生成摘要 → `wiki/summaries/`
    - 生成概念条目 → `wiki/concepts/`
    - 生成人物条目 → `wiki/people/`
-7. **更新编译状态**（Write）：
-   - 将已编译文件添加到 `compileState.compiledFiles`
-   - 设置 `compileState.status = "interrupted"`（如果未完成）或 `"completed"`（如果全部完成）
-   - 更新 `.kb-state.json`
+   
+7. **更新编译状态**（Write）：**这是关键步骤，必须保存完整策略信息**
+   ```javascript
+   // 计算统计信息
+   const conceptsCount = (Bash: ls wiki/concepts/).split('\n').length;
+   const peopleCount = (Bash: ls wiki/people/).split('\n').length;
+   const topicsCount = (Bash: ls wiki/topics/).split('\n').length;
+   const summariesCount = (Bash: ls wiki/summaries/).split('\n').length;
+   
+   // 写入 .kb-state.json
+   {
+     "compileState": {
+       "status": "interrupted",  // 如果未完成
+       "strategy": {
+         "batchSize": 3,         // 当前批次大小
+         "userChoice": 0,        // 0=未选择，1=继续全部，2=暂停
+         "totalBatches": 5,      // 总批次数
+         "currentBatch": 1       // 当前批次号（从1开始）
+       },
+       "compiledFiles": [...],   // 已完成的文件列表
+       "pendingFiles": [...],    // 待编译文件列表（重要！）
+       "totalFiles": 14,
+       "lastBatch": 1,
+       "stats": {
+         "concepts": conceptsCount,
+         "people": peopleCount,
+         "topics": topicsCount,
+         "summaries": summariesCount
+       }
+     }
+   }
+   ```
 8. **Git 提交**（Bash）：`git add . && git commit -m "wiki: compile batch X/Y"`
 
 9. **如果还有待编译文件，暂停并询问用户**：
@@ -226,9 +267,22 @@ description: 基于Karpathy理念的个人知识库编译器。AI直接研读文
    请选择 (1/2):
    ```
 
-10. **根据用户选择**：
-    - 用户选 1 → 继续编译剩余所有文件，每批完成后显示进度
-    - 用户选 2 → 设置 `compileState.status = "interrupted"`，保存状态，显示当前状态
+10. **根据用户选择**（关键：必须保存用户选择）：
+    - **用户选 1**：
+      - 更新 `.kb-state.json`：`strategy.userChoice = 1`
+      - 继续编译剩余所有文件，每批完成后：
+        - `strategy.currentBatch++`
+        - 更新 `compiledFiles` 和 `pendingFiles`
+        - 更新 `stats` 统计
+        - 写入 `.kb-state.json`
+    
+    - **用户选 2**：
+      - 更新 `.kb-state.json`：
+        - `status = "interrupted"`
+        - `strategy.userChoice = 2`
+        - 保存当前 `currentBatch`
+        - 保存 `pendingFiles` 列表
+      - 显示当前状态，等待下次续编
 
 11. **全部完成后**：
     - 生成 `wiki/index.md`
@@ -282,10 +336,19 @@ description: 基于Karpathy理念的个人知识库编译器。AI直接研读文
 ✅ 已编译: X
 ⏳ 待编译: Y
 
+🔄 编译策略（如果中断）：
+  • 批次大小: M 个文件/批
+  • 用户选择: [继续全部/暂停]
+  • 当前批次: A / 总批次 B
+  • 待编译文件列表:
+    - file1.md
+    - file2.epub
+
 📚 知识条目:
   • 概念: A 个
   • 人物: B 个
   • 主题: C 个
+  • 摘要: D 个
 
 🕐 最后编译: 2026-04-18 10:30
 ```
