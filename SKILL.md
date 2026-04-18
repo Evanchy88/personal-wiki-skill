@@ -268,89 +268,68 @@ description: |
    - 如果是续编：跳过 `compileState.compiledFiles` 中已完成的文件
    - 如果是全新编译：处理所有文件
 6. **统计文件数量**，决定编译策略：
-   - **1-3 个文件**：直接全部编译，设置 `batchSize = N`, `totalBatches = 1`
-   - **4+ 个文件**：先编译第一批（1-3个），设置 `batchSize = 3`, `totalBatches = Math.ceil(总数 / 3)`
-
-7. **编译第一批文件**（Read + Write）：
-   - 读取文件内容
-   - **严格按照 prompt 模板生成条目**（CRITICAL）：
-     - 概念条目：必须完全遵循 `prompts/concept.md` 的章节结构和格式，包括所有 emoji 和章节名
-     - 人物条目：必须完全遵循 `prompts/person.md` 的章节结构和格式，包括所有 emoji 和章节名
-     - **禁止自由发挥**：不要修改章节名称、不要省略章节、不要用列表代替表格
-     - 如果某些章节信息有限，保留章节标题并基于已有信息做最大化总结
-   - 提取概念、人物、主题（生成 JSON）
-   - 生成摘要 → `wiki/summaries/`
-   - 生成概念条目 → `wiki/concepts/`
-   - 生成人物条目 → `wiki/people/`
+   - **1-3 个文件**：直接全部编译，设置 `batchSize = N`, `totalBatches = 1`，**编译完成后直接跳到步骤 10（全部完成）**
+   - **4+ 个文件**：**先询问用户**（CRITICAL）：
+     ```
+     📊 发现 N 个文件需要编译，将分为 Y 批次处理（每批 3 个文件）
+     
+     编译策略：
+     [1] 自动编译全部批次（推荐）- AI 自动循环处理所有文件，不再询问
+     [2] 手动分批 - 每批完成后暂停，确认是否继续
+     
+     请选择 (1/2):
+     ```
    
-7. **更新编译状态**（Write）：**这是关键步骤，必须保存完整策略信息**
-   ```javascript
-   // 计算统计信息
-   const conceptsCount = (Bash: ls wiki/concepts/).split('\n').length;
-   const peopleCount = (Bash: ls wiki/people/).split('\n').length;
-   const topicsCount = (Bash: ls wiki/topics/).split('\n').length;
-   const summariesCount = (Bash: ls wiki/summaries/).split('\n').length;
+7. **根据用户选择执行**（CRITICAL - 必须在编译第一批前就获取用户选择）：
    
-   // 写入 .kb-state.json
-   {
-     "compileState": {
-       "status": "interrupted",  // 如果未完成
-       "strategy": {
-         "batchSize": 3,         // 当前批次大小
-         "userChoice": 0,        // 0=未选择，1=继续全部，2=暂停
-         "totalBatches": 5,      // 总批次数
-         "currentBatch": 1       // 当前批次号（从1开始）
-       },
-       "compiledFiles": [...],   // 已完成的文件列表
-       "pendingFiles": [...],    // 待编译文件列表（重要！）
-       "totalFiles": 14,
-       "lastBatch": 1,
-       "stats": {
-         "concepts": conceptsCount,
-         "people": peopleCount,
-         "topics": topicsCount,
-         "summaries": summariesCount
-       }
-     }
-   }
-   ```
-8. **Git 提交**（Bash）：`git add . && git commit -m "wiki: compile batch X/Y"`
+   **用户选 1（自动全部）**：
+   - 设置 `strategy.userChoice = 1`
+   - **立即开始自动循环编译所有批次**，不再进行任何询问
+   - 对于每一批：
+     - 读取该批文件内容（Read）
+     - 严格按照 prompt 模板生成条目
+     - 生成摘要 → `wiki/summaries/`
+     - 生成概念条目 → `wiki/concepts/`
+     - 生成人物条目 → `wiki/people/`
+     - 更新 `.kb-state.json`：`currentBatch++`, 更新 `compiledFiles` 和 `pendingFiles`
+     - Git 提交：`git add . && git commit -m "wiki: compile batch X/Y"`
+     - **只显示进度**（如"第 X/Y 批完成，M/N 文件已处理"），不停止
+   - 所有批次完成后，执行步骤 10（全部完成）
+   
+   **用户选 2（手动分批）**：
+   - 设置 `strategy.userChoice = 2`
+   - 只编译第一批（1-3个文件），然后执行步骤 8
 
-9. **如果还有待编译文件，暂停并询问用户**：
+8. **（仅当 userChoice = 2 时执行）第一批完成后，暂停并询问用户**：
    - 计算总批次数：`总批次数 = Math.ceil(剩余数 / 3)`
    ```
-   ✅ 第 M/总批次数 批编译完成！
-   📊 总进度: X/N 文件已处理 (剩余 剩余批次 批)
+   ✅ 第 1/M 批编译完成！
+   📊 总进度: X/N 文件已处理 (剩余 M-1 批)
    📋 累计生成: A 概念, B 人物, C 摘要
    
-   剩余 N-X 个文件，约 剩余批次 批。是否继续编译全部剩余文件？
-   [1] 是，继续编译全部剩余文件
+   剩余 N-X 个文件，约 M-1 批。是否继续？
+   [1] 是，继续编译
    [2] 否，暂停，我稍后继续（可随时通过 wiki compile 续编）
    
    请选择 (1/2):
    ```
+   
+   **用户选 1**：更新 `userChoice = 1`，跳到步骤 9 继续循环
+   **用户选 2**：更新状态为 interrupted，等待下次续编
 
-10. **根据用户选择**（关键：必须保存用户选择）：
-    - **用户选 1（继续全部）**：
-      - 更新 `.kb-state.json`：`strategy.userChoice = 1`
-      - **AI 自动循环编译所有剩余批次，不再询问用户**。每批完成后：
-        - `strategy.currentBatch++`
-        - 更新 `compiledFiles` 和 `pendingFiles`
-        - 更新 `stats` 统计
-        - 写入 `.kb-state.json`
-        - **只显示当前进度**（如"第 M/Y 批完成，X/N 文件已处理"），不再弹出选择提示
-        - 继续下一批，直到全部完成或出错
-      - 全部完成后，执行第 11 步
+9. **（循环编译逻辑 - 仅当 userChoice = 1 时执行）**：
+   - 对于剩余每一批：
+     - 读取该批文件内容（Read）
+     - 严格按照 prompt 模板生成条目
+     - 生成摘要 → `wiki/summaries/`
+     - 生成概念条目 → `wiki/concepts/`
+     - 生成人物条目 → `wiki/people/`
+     - 更新 `.kb-state.json`：`currentBatch++`, 更新 `compiledFiles` 和 `pendingFiles`, 更新 `stats`
+     - Git 提交：`git add . && git commit -m "wiki: compile batch X/Y"`
+     - **只显示进度**，不停止
+   - 所有批次完成后，执行步骤 10
 
-    - **用户选 2（暂停）**：
-      - 更新 `.kb-state.json`：
-        - `status = "interrupted"`
-        - `strategy.userChoice = 2`
-        - 保存当前 `currentBatch`
-        - 保存 `pendingFiles` 列表
-      - 显示当前状态，等待下次续编
-
-11. **全部完成后**：
+10. **全部完成后**：
     - 生成 `wiki/index.md`
     - 设置 `compileState.status = "completed"`，清空 `compiledFiles`
     - Git 提交最终结果
