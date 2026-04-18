@@ -53,11 +53,160 @@ description: 基于Karpathy理念的个人知识库编译器。AI直接研读文
 - **本地优先**：所有数据在本地，Git版本控制
 - **无需外部API**：**你直接生成内容**，不依赖 callLLM() 或外部 LLM API
 
+## 执行反馈规范（重要 - 必须遵守）
+
+**在执行编译任务时，你必须提供清晰、可视化的进度反馈**，让用户随时了解：
+- 当前执行到哪一步
+- 这一步的完成情况
+- 整体进度百分比
+
+### 反馈格式标准
+
+#### 1. 阶段标识（每步开始时必须显示）
+
+```
+🔄 阶段 N/总阶段数: 阶段名称
+```
+
+例如：
+```
+🔄 阶段 1/5: 扫描 raw/ 目录
+🔄 阶段 2/5: 识别文档类型
+🔄 阶段 3/5: 研读并提取关键要素
+🔄 阶段 4/5: 更新索引和状态
+🔄 阶段 5/5: Git 提交变更
+```
+
+#### 2. 子阶段进度（每个子阶段必须显示）
+
+```
+  📍 子步骤: 描述...
+    ✅ 完成: 结果
+```
+
+例如：
+```
+  📍 扫描 raw/ 目录...
+    ✅ 发现 8 个文件
+      • 新增: 5 个
+      • 修改: 2 个
+      • 未变: 1 个
+      • 删除: 0 个
+```
+
+#### 3. 文件处理进度（每处理一个文件必须显示）
+
+```
+📄 [当前文件/总文件数] 文件名
+  🏷️ 文档类型: 类型
+  [1/4] 🔍 提取关键要素...
+    ✅ 识别 X 个概念, Y 个人物, Z 个主题
+  [2/4] 📝 生成文章摘要...
+    ✅ 生成摘要: N 字
+  [3/4] 📚 撰写详细条目...
+    ✅ 概念: 概念名 (N 字)
+    ✅ 人物: 人名 (N 字)
+  [4/4] 🌐 主题聚合...
+    ✅ 主题: 主题名 (N 字)
+```
+
+#### 4. 整体进度条（每处理完一个文件必须更新）
+
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 进度: ████████░░░░░░░░ 37% (3/8 文件)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+**进度条规则**：
+- 总长度 16 个字符
+- `█` 表示已完成，`░` 表示未完成
+- 百分比 = (已完成文件数 / 总文件数) × 100%
+
+#### 5. 完成报告（全部处理完后必须显示）
+
+```
+✅ 编译完成！
+
+📋 编译报告
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📥 输入统计
+  • 处理文件: X 个
+  • 跳过文件: Y 个 (未变更)
+  • 清洗脏数据: Z 个
+  • 格式转换: N 个文件
+
+📤 输出统计
+  • 生成摘要: X 篇
+  • 提取概念: Y 个
+  • 提取人物: Z 个
+  • 生成主题: N 个
+  • 方法论: A 个
+  • 研究发现: B 个
+  • 新闻事件: C 个
+  • 技术方案: D 个
+  • Wiki链接: E 条
+  • 移除无效链接: F 个
+
+⚠️ 问题发现
+  • 编译失败: G 个
+  • (如有失败，列出具体文件和错误)
+
+💡 建议
+  • 请抽检 wiki/summaries/ 确认内容准确性
+  • 运行 wiki lint 进行深度质量检查
+  • 运行 wiki view 查看完整知识库
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✓ 已自动提交Git
+```
+
+### Emoji 使用规范
+
+**阶段标识**：
+- 🔄 执行中
+- ✅ 完成
+- ❌ 失败
+- ⚠️ 警告
+- 💡 建议
+- 📊 统计
+- 📄 文件
+- 📍 子步骤
+- 🏷️ 标签
+- 🔍 提取
+- 📝 生成
+- 📚 撰写
+- 🌐 聚合
+- 📥 输入
+- 📤 输出
+
+**状态标识**：
+- ✓ 成功
+- ✗ 失败
+- ⚡ 快速完成
+- ⏳ 等待中
+
+### 反馈时机
+
+**必须立即反馈**：
+1. 开始每个阶段时
+2. 完成每个子步骤时
+3. 处理完每个文件后
+4. 遇到错误或警告时
+5. 整体编译完成时
+
+**可选反馈**：
+- 处理大型文件时（>100KB），每完成 25% 进度可显示一次
+- 批量操作时（如创建多个概念文件），每 5 个显示一次汇总
+
 ## 编译执行流程（重要）
 
 当用户请求 `wiki compile` 时，**你必须按以下步骤执行**：
 
 ### Step 0: 读取编译规则
+
+🔄 阶段 0/5: 读取编译规则
 
 首先读取以下文件，理解编译规则：
 1. `prompts/compile.md` - 通用编译规则
@@ -70,7 +219,21 @@ description: 基于Karpathy理念的个人知识库编译器。AI直接研读文
 - 新闻型：`prompts/compile-news.md`, `prompts/summary-news.md`, `prompts/event.md`
 - 技术型：`prompts/compile-tech.md`, `prompts/summary-tech.md`, `prompts/technique.md`
 
+**反馈示例**：
+```
+🔄 阶段 0/5: 读取编译规则
+  📍 读取通用编译模板...
+    ✅ compile.md (2.6KB)
+    ✅ concept.md (4.6KB)
+    ✅ person.md (4.1KB)
+    ✅ topics.md (5.1KB)
+  📍 检测文档类型模板...
+    ✅ 发现学术型模板: compile-academic.md, summary-academic.md
+```
+
 ### Step 1: 扫描 raw/ 目录
+
+🔄 阶段 1/5: 扫描 raw/ 目录
 
 ```bash
 ls raw/
@@ -78,7 +241,32 @@ ls raw/
 
 获取所有待处理的文章列表（支持 .md, .pdf, .docx, .epub, .html, .csv, .json 等格式）。
 
+**反馈示例**：
+```
+🔄 阶段 1/5: 扫描 raw/ 目录
+  📍 扫描 raw/ 目录...
+    ✅ 发现 8 个文件
+      • 新增: 5 个
+      • 修改: 2 个
+      • 未变: 1 个
+      • 删除: 0 个
+
+  📋 待处理文件:
+    1. article-attention.md (新增, 45KB)
+    2. paper-transformer.md (新增, 120KB)
+    3. news-ai-regulation.md (新增, 32KB)
+    4. tutorial-pytorch.md (新增, 67KB)
+    5. research-llm.md (新增, 89KB)
+    6. old-article.md (修改, 28KB)
+    7. updated-notes.md (修改, 15KB)
+
+  ⏱️ 预计时间: 3-5 分钟
+  开始编译? [Y/n]
+```
+
 ### Step 2: 识别文档类型
+
+🔄 阶段 2/5: 识别文档类型
 
 对每篇文章，判断其类型：
 - **narrative**（叙事型）：默认类型
@@ -88,7 +276,22 @@ ls raw/
 
 用户可用 `--type <类型>` 强制指定，或用 `--force` 强制重新编译所有。
 
+**反馈示例**：
+```
+🔄 阶段 2/5: 识别文档类型
+  📍 分析文件类型...
+    ✅ article-attention.md → academic (路径含 research)
+    ✅ paper-transformer.md → academic (内容含摘要/参考文献)
+    ✅ news-ai-regulation.md → news (路径含 news)
+    ✅ tutorial-pytorch.md → technical (路径含 tutorial)
+    ✅ research-llm.md → academic (路径含 research)
+    ✅ old-article.md → narrative (默认)
+    ✅ updated-notes.md → narrative (默认)
+```
+
 ### Step 3: 研读并提取（四阶段编译）
+
+🔄 阶段 3/5: 研读并提取关键要素
 
 对每篇文章，执行四个阶段：
 
@@ -149,16 +352,66 @@ ls raw/
 
 保存到 `wiki/topics/{主题名}.md`
 
+**完整反馈示例**（处理单个文件）：
+```
+📄 [1/7] article-attention.md
+  🏷️ 文档类型: academic
+  [1/4] 🔍 提取关键要素...
+    ✅ 识别 4 个概念: 注意力机制, Transformer, Self-Attention, Multi-Head Attention
+    ✅ 识别 2 个人物: Vaswani, Bahdanau
+    ✅ 识别 3 个主题: 深度学习，自然语言处理，序列模型
+  [2/4] 📝 生成文章摘要...
+    ✅ 生成摘要: 280 字 → wiki/summaries/article-attention.md
+  [3/4] 📚 撰写详细条目...
+    ✅ 概念: 注意力机制 (520 字) → wiki/concepts/注意力机制.md
+    ✅ 概念: Transformer (480 字) → wiki/concepts/Transformer.md
+    ✅ 概念: Self-Attention (450 字) → wiki/concepts/Self-Attention.md
+    ✅ 概念: Multi-Head Attention (430 字) → wiki/concepts/Multi-Head-Attention.md
+    ✅ 人物: Vaswani (380 字) → wiki/people/Vaswani.md
+    ✅ 人物: Bahdanau (350 字) → wiki/people/Bahdanau.md
+  [4/4] 🌐 主题聚合...
+    ⏳ 等待所有文件处理完后统一执行
+```
+
+**进度条更新**（每处理完一个文件）：
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 进度: ██░░░░░░░░░░░░░░ 14% (1/7 文件)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
 ### Step 4: 更新索引和状态
+
+🔄 阶段 4/5: 更新索引和状态
 
 生成 `wiki/index.md` 全局索引，更新 `.kb-state.json` 编译状态。
 
+**反馈示例**：
+```
+🔄 阶段 4/5: 更新索引和状态
+  📍 生成全局索引...
+    ✅ wiki/index.md (1.2KB)
+  📍 更新编译状态...
+    ✅ .kb-state.json (更新 7 个文件记录)
+```
+
 ### Step 5: Git 提交
+
+🔄 阶段 5/5: Git 提交变更
 
 自动提交变更：
 ```bash
 git add .
 git commit -m "wiki: compile - X files, Y concepts, Z topics"
+```
+
+**反馈示例**：
+```
+🔄 阶段 5/5: Git 提交变更
+  📍 提交变更...
+    ✅ git add . (添加 15 个文件)
+    ✅ git commit -m "wiki: compile - 7 files, 18 concepts, 4 topics"
+    ✓ Commit: abc1234
 ```
 
 ## 编译质量要求（必须遵守）
@@ -284,72 +537,161 @@ wiki compile --force            # 强制重新编译所有文件
 
 ## 交互流程示例
 
-### wiki compile
+### wiki compile（完整反馈示例）
 
 ```
 用户: wiki compile
 
-AI: 📊 准备编译知识库...
-    扫描 raw/ 目录...
-    ✓ 发现 8 个文件
-      • 新增: 5 个  • 修改: 2 个  • 未变: 1 个
+AI: 🔄 阶段 0/5: 读取编译规则
+    📍 读取通用编译模板...
+      ✅ compile.md (2.6KB)
+      ✅ concept.md (4.6KB)
+      ✅ person.md (4.1KB)
+      ✅ topics.md (5.1KB)
+    📍 检测文档类型模板...
+      ✅ 发现学术型模板: compile-academic.md, summary-academic.md, method.md, finding.md
+      ✅ 发现新闻型模板: compile-news.md, summary-news.md, event.md
+      ✅ 发现技术型模板: compile-tech.md, summary-tech.md, technique.md
+
+🔄 阶段 1/5: 扫描 raw/ 目录
+    📍 扫描 raw/ 目录...
+      ✅ 发现 8 个文件
+        • 新增: 5 个
+        • 修改: 2 个
+        • 未变: 1 个
+        • 删除: 0 个
 
     📋 待处理文件:
       1. article-attention.md (新增, 45KB)
       2. paper-transformer.md (新增, 120KB)
-      ...
+      3. news-ai-regulation.md (新增, 32KB)
+      4. tutorial-pytorch.md (新增, 67KB)
+      5. research-llm.md (新增, 89KB)
+      6. old-article.md (修改, 28KB)
+      7. updated-notes.md (修改, 15KB)
 
     ⏱️ 预计时间: 3-5 分钟
     开始编译? [Y/n]
 
 用户: Y
 
-AI: 🔄 正在编译知识库...
+AI: 🔄 阶段 2/5: 识别文档类型
+    📍 分析文件类型...
+      ✅ article-attention.md → academic (路径含 research)
+      ✅ paper-transformer.md → academic (内容含摘要/参考文献)
+      ✅ news-ai-regulation.md → news (路径含 news)
+      ✅ tutorial-pytorch.md → technical (路径含 tutorial)
+      ✅ research-llm.md → academic (路径含 research)
+      ✅ old-article.md → narrative (默认)
+      ✅ updated-notes.md → narrative (默认)
 
-    [1/8] 研读 article-attention.md ...
-          🏷️ 文档类型: academic
-          [1/4] 提取关键要素...
-              ✓ 识别 4 个概念, 2 个人物
-          [2/4] 生成文章摘要...
-              ✓ 生成摘要: 280 字
-          [3/4] 撰写概念详细条目...
-              ✓ 概念: 注意力机制 (450 字)
-              ✓ 概念: Transformer (520 字)
-              ✓ 人物: Vaswani (380 字)
-          [4/4] 主题聚类与聚合页生成...
-              ✓ 主题: 深度学习 (680 字)
+🔄 阶段 3/5: 研读并提取关键要素
 
-    [进度条] ████████░░░░░░░░ 37% (3/8)
-    ...
+📄 [1/7] article-attention.md
+  🏷️ 文档类型: academic
+  [1/4] 🔍 提取关键要素...
+    ✅ 识别 4 个概念: 注意力机制, Transformer, Self-Attention, Multi-Head Attention
+    ✅ 识别 2 个人物: Vaswani, Bahdanau
+    ✅ 识别 3 个主题: 深度学习，自然语言处理，序列模型
+  [2/4] 📝 生成文章摘要...
+    ✅ 生成摘要: 280 字 → wiki/summaries/article-attention.md
+  [3/4] 📚 撰写详细条目...
+    ✅ 概念: 注意力机制 (520 字) → wiki/concepts/注意力机制.md
+    ✅ 概念: Transformer (480 字) → wiki/concepts/Transformer.md
+    ✅ 概念: Self-Attention (450 字) → wiki/concepts/Self-Attention.md
+    ✅ 概念: Multi-Head Attention (430 字) → wiki/concepts/Multi-Head-Attention.md
+    ✅ 人物: Vaswani (380 字) → wiki/people/Vaswani.md
+    ✅ 人物: Bahdanau (350 字) → wiki/people/Bahdanau.md
+  [4/4] 🌐 主题聚合...
+    ⏳ 等待所有文件处理完后统一执行
 
-    ✓ 编译完成!
-    📋 编译报告
-    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    📥 输入统计
-      • 处理文件: 5 个
-      • 跳过文件: 1 个 (未变更)
-      • 清洗脏数据: 0 个
-      • 格式转换: 2 个文件
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 进度: ██░░░░░░░░░░░░░░ 14% (1/7 文件)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-    📤 输出统计
-      • 生成摘要: 5 篇
-      • 提取概念: 12 个
-      • 提取人物: 4 个
-      • 生成主题: 3 个
-      • 方法论: 2 个
-      • 研究发现: 3 个
-      • Wiki链接: 28 条
-      • 移除无效链接: 1 个
+📄 [2/7] paper-transformer.md
+  🏷️ 文档类型: academic
+  [1/4] 🔍 提取关键要素...
+    ✅ 识别 5 个概念: Positional Encoding, Layer Normalization, Residual Connection, Decoder, Encoder
+    ✅ 识别 1 个人物: Ilya Sutskever
+    ✅ 识别 2 个主题: 序列到序列模型，机器翻译
+  [2/4] 📝 生成文章摘要...
+    ✅ 生成摘要: 310 字 → wiki/summaries/paper-transformer.md
+  [3/4] 📚 撰写详细条目...
+    ✅ 概念: Positional Encoding (460 字) → wiki/concepts/Positional-Encoding.md
+    ✅ 概念: Layer Normalization (420 字) → wiki/concepts/Layer-Normalization.md
+    ✅ 概念: Residual Connection (390 字) → wiki/concepts/Residual-Connection.md
+    ✅ 概念: Decoder (440 字) → wiki/concepts/Decoder.md
+    ✅ 概念: Encoder (410 字) → wiki/concepts/Encoder.md
+    ✅ 人物: Ilya Sutskever (360 字) → wiki/people/Ilya-Sutskever.md
 
-    ⚠️ 问题发现
-      • 编译失败: 0 个
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 进度: ████░░░░░░░░░░░░ 29% (2/7 文件)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-    💡 建议
-      • 请抽检 wiki/summaries/ 确认内容准确性
-      • 运行 wiki lint 进行深度质量检查
-      • 运行 wiki view 查看完整知识库
-    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    ✓ 已自动提交Git
+... (继续处理剩余文件)
+
+📄 [7/7] updated-notes.md
+  🏷️ 文档类型: narrative
+  [1/4] 🔍 提取关键要素...
+    ✅ 识别 2 个概念: 知识管理，个人成长
+    ✅ 识别 1 个人物: 卡尔·纽波特
+  [2/4] 📝 生成文章摘要...
+    ✅ 生成摘要: 240 字 → wiki/summaries/updated-notes.md
+  [3/4] 📚 撰写详细条目...
+    ✅ 概念: 知识管理 (380 字) → wiki/concepts/知识管理.md
+    ✅ 概念: 个人成长 (350 字) → wiki/concepts/个人成长.md
+    ✅ 人物: 卡尔·纽波特 (320 字) → wiki/people/卡尔·纽波特.md
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 进度: ████████████████ 100% (7/7 文件)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔄 阶段 4/5: 更新索引和状态
+    📍 生成全局索引...
+      ✅ wiki/index.md (2.8KB)
+    📍 更新编译状态...
+      ✅ .kb-state.json (更新 7 个文件记录)
+
+🔄 阶段 5/5: Git 提交变更
+    📍 提交变更...
+      ✅ git add . (添加 32 个文件)
+      ✅ git commit -m "wiki: compile - 7 files, 24 concepts, 6 topics"
+      ✓ Commit: abc1234
+
+✅ 编译完成！
+
+📋 编译报告
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📥 输入统计
+  • 处理文件: 7 个
+  • 跳过文件: 1 个 (未变更)
+  • 清洗脏数据: 0 个
+  • 格式转换: 0 个文件
+
+📤 输出统计
+  • 生成摘要: 7 篇
+  • 提取概念: 24 个
+  • 提取人物: 6 个
+  • 生成主题: 4 个
+  • 方法论: 3 个
+  • 研究发现: 5 个
+  • 新闻事件: 2 个
+  • 技术方案: 4 个
+  • Wiki链接: 56 条
+  • 移除无效链接: 0 个
+
+⚠️ 问题发现
+  • 编译失败: 0 个
+
+💡 建议
+  • 请抽检 wiki/summaries/ 确认内容准确性
+  • 运行 wiki lint 进行深度质量检查
+  • 运行 wiki view 查看完整知识库
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✓ 已自动提交Git
 ```
 
 ### wiki qa
