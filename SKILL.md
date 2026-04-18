@@ -97,16 +97,39 @@ description: 基于Karpathy理念的个人知识库编译器。AI直接研读文
 
 1. **读取编译规则**（Read）：`prompts/compile.md`, `concept.md`, `person.md`, `topics.md`
 2. **扫描 raw/ 目录**（Bash）：`ls <kbPath>/raw/`
-3. **逐文件处理**（Read + Write）：
+3. **统计文件数量**，决定编译策略：
+   - **1-3 个文件**：直接全部编译
+   - **4+ 个文件**：先编译第一批（1-3个），然后询问用户
+
+4. **编译第一批文件**（Read + Write）：
    - 读取文件内容
    - 提取概念、人物、主题（生成 JSON）
    - 生成摘要 → `wiki/summaries/`
    - 生成概念条目 → `wiki/concepts/`
    - 生成人物条目 → `wiki/people/`
-4. **更新索引和状态**（Write）：
+5. **Git 提交第一批**（Bash）：`git add . && git commit -m "wiki: compile batch 1/X"`
+
+6. **如果文件 >3 个，暂停并询问用户**：
+   ```
+   ✅ 第一批编译完成！
+   📊 进度: X/N 文件已处理
+   📋 已生成: A 概念, B 人物, C 摘要
+   
+   剩余 N-X 个文件待编译。是否继续编译全部剩余文件？
+   [1] 是，继续编译全部剩余文件
+   [2] 否，暂停，我稍后手动继续
+   
+   请选择 (1/2):
+   ```
+
+7. **根据用户选择**：
+   - 用户选 1 → 继续编译剩余所有文件，每批完成后显示进度
+   - 用户选 2 → 暂停，显示当前状态
+
+8. **全部完成后**：
    - 生成 `wiki/index.md`
    - 更新 `.kb-state.json`
-5. **Git 提交**（Bash）：`git add . && git commit -m "wiki: compile - X files, Y concepts"`
+   - Git 提交最终结果
 
 **反馈格式**：
 ```
