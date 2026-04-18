@@ -167,10 +167,21 @@ description: |
 
 ## 重要：路径和工具
 
-**Skill 位置**：
-- SKILL.md：`d:\Qoder\personal-wiki-skill\SKILL.md`
-- Prompt 模板：`d:\Qoder\personal-wiki-skill\prompts\`
-- **使用绝对路径读取 prompt 文件**
+**⚠️ 这不是命令行工具，AI 直接执行所有操作**
+
+**不要执行 `node index.js` 或任何命令行工具**。你是编译引擎，亲自完成所有工作：
+- 读取文件内容 → 使用 Read 工具
+- 分析文章 → 你亲自理解
+- 生成知识条目 → 你亲自撰写
+- 写入 wiki 目录 → 使用 Write 工具
+- Git 操作 → 使用 Bash 执行 git 命令
+
+**Prompt 模板位置**（如果存在）：
+- `prompts/compile.md` - 编译规则
+- `prompts/concept.md` - 概念条目格式
+- `prompts/person.md` - 人物条目格式
+- `prompts/topics.md` - 主题条目格式
+- **使用相对路径读取 prompt 文件**（相对于 SKILL.md 所在目录）
 
 **知识库路径**：
 - 用户指定路径（如 `D:\Wiki\读书`）
