@@ -21,10 +21,13 @@ async function gitLog(kbPath) {
   
   const log = getGitLog(resolvedPath, { oneline: true });
   
+  // Handle error object return
+  const logStr = typeof log === 'object' ? (log.error || '无历史记录') : (log || '无历史记录');
+  
   console.log(`📜 编译历史
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-${log || '无历史记录'}
+${logStr}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
 }
@@ -34,10 +37,13 @@ async function gitDiff(kbPath, commit) {
   
   const diff = getGitDiff(resolvedPath, commit);
   
+  // Handle error object return
+  const diffStr = typeof diff === 'object' ? (diff.error || '无变更') : (diff || '无变更');
+  
   console.log(`📝 Git Diff
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-${diff || '无变更'}
+${diffStr}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
 }
@@ -68,9 +74,13 @@ async function gitBranchCmd(kbPath, branchName) {
   const resolvedPath = kbPath ? path.resolve(kbPath) : resolveKbPath();
   
   const result = gitBranch(resolvedPath, branchName);
+  
+  // Handle error object return
+  const resultStr = typeof result === 'object' ? (result.error || '无分支信息') : (result || '无分支信息');
+  
   console.log(`📋 分支列表
 
-${result || '无分支信息'}
+${resultStr}
 `);
 }
 
