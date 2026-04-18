@@ -145,15 +145,32 @@ function scanAndConvertDirectory(rawDir, tempDir) {
 
   for (const file of allFiles) {
     if (isMarkdownFile(file)) {
-      mdFiles.push(file);
-      mdFileSet.add(file);
+      // Skip if already added by convertAndSave
+      if (!mdFileSet.has(file)) {
+        mdFiles.push(file);
+        mdFileSet.add(file);
+      }
       skipped++;
     } else if (isSupportedFormat(file)) {
       try {
-        // 转换后的 .md 直接存到 raw/ 目录，与源文件同名
+        // Pre-calculate the target .md path to avoid duplicates
+        const ext = path.extname(file);
+        const base = path.basename(file, ext);
+        const targetMdPath = path.join(rawDir, `${base}.md`);
+
+        // If target .md already exists, add it now and skip conversion
+        if (fs.existsSync(targetMdPath)) {
+          if (!mdFileSet.has(targetMdPath)) {
+            mdFiles.push(targetMdPath);
+            mdFileSet.add(targetMdPath);
+          }
+          skipped++;
+          continue;
+        }
+
+        // Convert and save
         const convertedPath = convertAndSave(file, rawDir);
         if (convertedPath) {
-          // Only add if not already in the list (avoid duplicates)
           if (!mdFileSet.has(convertedPath)) {
             mdFiles.push(convertedPath);
             mdFileSet.add(convertedPath);

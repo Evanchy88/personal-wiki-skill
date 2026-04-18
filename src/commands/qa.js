@@ -1,11 +1,19 @@
 const path = require('path');
 const fs = require('fs');
 const { resolveKbPath, loadKbState } = require('../utils/config');
-const { scanDirectory, readMarkdownFile, extractWikiLinks, listWikiFiles } = require('../utils/file');
+const { readMarkdownFile } = require('../utils/file');
 
-async function qa(question, kbPath) {
-  const resolvedPath = kbPath ? path.resolve(kbPath) : resolveKbPath();
+async function qa(kbPath, options = {}) {
+  const resolvedPath = kbPath ? path.resolve(kbPath) : resolveKbPath(options.path, options);
   const wikiDir = path.join(resolvedPath, 'wiki');
+  
+  // Get question from options._[0]
+  const question = options._ ? options._[0] : undefined;
+  if (!question) {
+    console.log('❌ 请提供问题');
+    console.log('用法: wiki qa "你的问题"');
+    return;
+  }
   
   if (!fs.existsSync(wikiDir)) {
     console.log('❌ 知识库尚未初始化，请先运行 wiki init');
@@ -49,7 +57,16 @@ async function qa(question, kbPath) {
 
 function searchWiki(wikiDir, question) {
   const results = [];
-  const keywords = question.toLowerCase().split(/\s+/);
+  // Split by whitespace for English, but also check individual characters for Chinese
+  const keywords = question.toLowerCase().split(/\s+/).filter(kw => kw.length > 0);
+  // For Chinese text (no spaces), also add character-level matching
+  if (keywords.length === 1 && /[\u4e00-\u9fa5]/.test(question)) {
+    // Use meaningful chunks (2-3 characters) for Chinese matching
+    const chineseChars = question.toLowerCase().match(/[\u4e00-\u9fa5]/g) || [];
+    if (chineseChars.length > 0) {
+      keywords.push(...chineseChars);
+    }
+  }
   
   // Search in index.md
   const indexFile = path.join(wikiDir, 'index.md');
