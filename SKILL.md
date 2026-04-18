@@ -264,29 +264,35 @@ description: |
      [2] 否，重新开始全量编译
      ```
 4. **扫描 raw/ 目录**（Bash）：`ls <kbPath>/raw/`
-5. **文件格式转换**（CRITICAL）：
-   - 对于每个文件，检查文件扩展名：
-     - **.md, .txt, .csv, .json, .xml, .html**：直接使用 Read 工具读取
-     - **.epub, .pdf, .docx, .pptx, .xlsx, .mp3, .wav, .mp4**：**必须先转换为 Markdown**
+5. **文件格式转换**（CRITICAL - 必须严格执行）：
+   - 扫描 raw/ 目录，识别所有**非 Markdown 格式**的文件：
+     - **需要转换的格式**：.epub, .pdf, .docx, .pptx, .xlsx, .mp3, .wav, .mp4
+     - **可直接读取的格式**：.md, .txt, .csv, .json, .xml, .html
    
-   **转换方法**：
-   - **使用 `markitdown` 工具**（已安装的 skill）：
+   **转换规则**（CRITICAL）：
+   - **必须使用 `markitdown` 工具**，禁止使用其他 Python 库或自定义脚本
+   - 如果 markitdown 未安装，**停止编译并提示用户**：`请先安装 markitdown: pip install markitdown`
+   - 转换命令：
      ```bash
-     # 单个文件转换
-     markitdown <file.epub> > <output.md>
+     # 转换单个 EPUB
+     markitdown "raw/file.epub" > "raw/file.md"
      
-     # 批量转换
-     for file in raw/*.epub raw/*.pdf raw/*.docx; do
-       markitdown "$file" > "raw/$(basename "$file" .${file##*.}).md"
-     done
+     # 批量转换所有非 .md 文件
+     markitdown "raw/*.epub" "raw/*.pdf" "raw/*.docx" 2>/dev/null || true
      ```
-   - 转换后将 .md 文件保存到 `raw/` 目录，原始文件保留
-   - 如果 `markitdown` 不可用，提示用户安装：`pip install markitdown` 或使用其他转换工具
+   - 转换后的 .md 文件保存在 `raw/` 目录，与原始文件同名但扩展名为 .md
+   - **转换完成后，重新扫描 raw/ 目录**，获取所有 .md 文件列表（包括刚转换出来的）
+   
+   **重要**：转换完成后，原始 EPUB/PDF 等文件标记为"已处理"，**待编译文件是转换后的 .md 文件**
 
-6. **筛选待编译文件**：
-   - 如果是续编：跳过 `compileState.compiledFiles` 中已完成的文件
-   - 如果是全新编译：处理所有文件（包括转换后的 .md 文件）
-7. **统计文件数量**，决定编译策略：
+6. **重新扫描并筛选待编译文件**（CRITICAL）：
+   - **重新扫描 raw/ 目录**（Bash）：`ls <kbPath>/raw/`
+   - 筛选规则：
+     - 只处理 **.md 文件**（包括转换后生成的和原有的）
+     - 如果是续编：跳过 `compileState.compiledFiles` 中已完成的 .md 文件
+     - 如果是全新编译：处理所有 .md 文件
+   - **重要**：原始 EPUB/PDF 等文件不编译，只编译转换后的 .md 文件
+7. **统计 .md 文件数量**，决定编译策略：
    - **1-3 个文件**：直接全部编译，设置 `batchSize = N`, `totalBatches = 1`，**编译完成后直接跳到步骤 11（全部完成）**
    - **4+ 个文件**：**先询问用户**（CRITICAL）：
      ```
