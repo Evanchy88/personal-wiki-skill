@@ -33,7 +33,18 @@ Thumbs.db
   runGitCommand('git init', kbPath);
   fs.writeFileSync(path.join(kbPath, '.gitignore'), gitignore);
   runGitCommand('git add .', kbPath);
-  runGitCommand('git commit -m "wiki: initialize knowledge base"', kbPath);
+  
+  // 检查是否配置了 git 身份
+  const userName = runGitCommand('git config user.name', kbPath);
+  const userEmail = runGitCommand('git config user.email', kbPath);
+  
+  if (!userName?.trim() || !userEmail?.trim()) {
+    // 未配置身份，使用临时身份进行本地提交
+    runGitCommand('git -c user.name="wiki-user" -c user.email="wiki@local" commit -m "wiki: initialize knowledge base"', kbPath);
+  } else {
+    // 已配置身份，正常提交
+    runGitCommand('git commit -m "wiki: initialize knowledge base"', kbPath);
+  }
 }
 
 function getGitStatus(kbPath) {
@@ -58,7 +69,16 @@ function gitAdd(files, kbPath) {
 }
 
 function gitCommit(kbPath, message) {
-  return runGitCommand(`git commit -m "${message}"`, kbPath);
+  // 检查是否配置了 git 身份
+  const userName = runGitCommand('git config user.name', kbPath);
+  const userEmail = runGitCommand('git config user.email', kbPath);
+  
+  if (!userName?.trim() || !userEmail?.trim()) {
+    // 未配置身份，使用临时身份提交
+    return runGitCommand(`git -c user.name="wiki-user" -c user.email="wiki@local" commit -m "${message}"`, kbPath);
+  } else {
+    return runGitCommand(`git commit -m "${message}"`, kbPath);
+  }
 }
 
 function gitReset(kbPath, commit) {

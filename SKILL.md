@@ -57,18 +57,25 @@ description: 基于Karpathy理念的个人知识库编译器。AI直接研读文
    ```bash
    mkdir -p <kbPath>/raw <kbPath>/wiki/{summaries,concepts,people,topics,methods,findings,events,techniques}
    ```
-3. **初始化 Git**（Bash）：
-   ```bash
-   cd <kbPath> && git init
-   ```
-4. **创建配置**（Write）：
+3. **创建配置**（Write）：
    - `.kb-config.json`: `{"defaultPath":"<kbPath>","llmModel":"qwen-plus"}`
    - `.kb-state.json`: `{"version":1,"lastCompile":null,"files":{}}`
    - `.gitignore`: `node_modules/\n.DS_Store`
-5. **Git 提交**（Bash）：
+4. **初始化 Git**（Bash）：
+   ```bash
+   cd <kbPath> && git init
+   ```
+5. **检查 Git 身份**（Bash）：
+   ```bash
+   git config user.name && git config user.email
+   ```
+   - ✅ 已配置 → 直接提交
+   - ❌ 未配置 → 用 `git -c user.name="wiki-user" -c user.email="wiki@local"` 提交（本地提交不需要真实身份）
+6. **Git 提交**（Bash）：
    ```bash
    cd <kbPath> && git add . && git commit -m "wiki: init"
    ```
+7. **不要求配置远程**：远程推送是可选的，后续用户可通过 `wiki git remote setup` 配置
 
 **反馈格式**：
 ```
@@ -76,11 +83,12 @@ description: 基于Karpathy理念的个人知识库编译器。AI直接研读文
 📍 确认知识库路径: <kbPath>
 🔄 初始化知识库...
   📍 创建目录结构... ✅
-  📍 初始化Git仓库... ✅
   📍 创建配置文件... ✅
-  📍 Git 提交... ✅
+  📍 初始化Git仓库... ✅
+  📍 Git 提交... ✅ (本地提交，远程推送可选)
 ✅ 知识库初始化完成！📂 <kbPath>
 💡 下一步: 将文章保存到 raw/ 目录，运行 wiki compile
+💡 Git版本控制: 本地已启用，远程推送可选配置
 ```
 
 ## wiki compile 执行步骤
