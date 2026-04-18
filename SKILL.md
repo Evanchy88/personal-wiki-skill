@@ -45,6 +45,154 @@ description: 基于Karpathy理念的个人知识库编译器。AI直接研读文
 
 所有命令支持 `--kb <name>` 指定知识库，`--path <path>` 指定路径。
 
+## 命令执行步骤（必须严格遵守）
+
+**每个命令都必须按以下步骤实际执行，不能只输出文本而不执行操作**：
+
+### wiki init（初始化知识库）- 必须执行的步骤
+
+当用户请求 `wiki init [path]` 时，**你必须按顺序执行以下操作**：
+
+1. **创建目录结构**（使用 Bash 命令）：
+   ```bash
+   mkdir -p <path>/raw
+   mkdir -p <path>/wiki/summaries
+   mkdir -p <path>/wiki/concepts
+   mkdir -p <path>/wiki/people
+   mkdir -p <path>/wiki/topics
+   mkdir -p <path>/wiki/methods
+   mkdir -p <path>/wiki/findings
+   mkdir -p <path>/wiki/events
+   mkdir -p <path>/wiki/techniques
+   ```
+
+2. **初始化 Git 仓库**（使用 Bash 命令）：
+   ```bash
+   cd <path>
+   git init
+   ```
+
+3. **创建配置文件**（写入文件）：
+   - `.kb-config.json`: 写入默认配置
+   - `.kb-state.json`: 写入初始状态
+
+4. **创建 .gitignore**（写入文件）：
+   ```
+   node_modules/
+   .DS_Store
+   ```
+
+5. **Git 提交初始结构**（使用 Bash 命令）：
+   ```bash
+   git add .
+   git commit -m "wiki: init - 初始化知识库结构"
+   ```
+
+**反馈示例**：
+```
+📚 personal-wiki 知识库编译器
+    这个Skill可以帮你：
+    1. 📥 收集原始文章到 raw/ 目录
+    2. 🤖 AI自动研读并生成结构化笔记到 wiki/ 目录
+    3. 💬 基于笔记进行深度问答学习
+
+    📍 首先，知识库保存在哪个目录？
+    [1] D:\knowledge-base (推荐)
+    [2] 自定义路径
+
+    请选择 (1/2) 或直接输入路径:
+
+用户: 1
+
+AI: 🔄 初始化知识库...
+    📍 创建目录结构...
+      ✅ D:\knowledge-base/raw/
+      ✅ D:\knowledge-base/wiki/summaries/
+      ✅ D:\knowledge-base/wiki/concepts/
+      ✅ D:\knowledge-base/wiki/people/
+      ✅ D:\knowledge-base/wiki/topics/
+    📍 初始化Git仓库...
+      ✓ git init 成功
+    📍 创建配置文件...
+      ✅ .kb-config.json
+      ✅ .kb-state.json
+    📍 Git 提交...
+      ✓ Commit: abc1234 (wiki: init - 初始化知识库结构)
+
+    ✅ 知识库初始化完成！
+    📂 路径: D:\knowledge-base
+    
+    💡 下一步:
+      • 将文章保存到 raw/ 目录
+      • 运行 wiki compile 开始编译
+```
+
+### wiki compile（编译知识库）- 必须执行的步骤
+
+当用户请求 `wiki compile` 时，**你必须按顺序执行以下操作**：
+
+1. **读取编译规则**：
+   - 读取 `prompts/compile.md`、`concept.md`、`person.md`、`topics.md`
+
+2. **扫描 raw/ 目录**：
+   ```bash
+   ls raw/
+   ```
+
+3. **逐文件处理**（对每个文件）：
+   - 读取文件内容
+   - 提取概念、人物、主题
+   - 生成摘要（写入 `wiki/summaries/`）
+   - 生成概念条目（写入 `wiki/concepts/`）
+   - 生成人物条目（写入 `wiki/people/`）
+
+4. **更新索引和状态**：
+   - 生成 `wiki/index.md`
+   - 更新 `.kb-state.json`
+
+5. **Git 提交**：
+   ```bash
+   git add .
+   git commit -m "wiki: compile - X files, Y concepts, Z topics"
+   ```
+
+### wiki qa（问答）- 必须执行的步骤
+
+当用户请求 `wiki qa "问题"` 时，**你必须按顺序执行以下操作**：
+
+1. **扫描 wiki/ 目录**：
+   ```bash
+   ls wiki/concepts/ wiki/people/ wiki/summaries/
+   ```
+
+2. **读取相关文件**：
+   - 根据问题关键词匹配概念文件
+   - 读取匹配的 .md 文件内容
+
+3. **基于内容回答**：
+   - 严格基于 wiki/ 目录中的内容回答
+   - 列出参考来源
+
+### wiki lint（质量检查）- 必须执行的步骤
+
+当用户请求 `wiki lint` 时，**你必须按顺序执行以下操作**：
+
+1. **扫描所有 wiki/ 文件**：
+   ```bash
+   find wiki/ -name "*.md"
+   ```
+
+2. **检查断裂链接**：
+   - 读取每个文件的 `[[wikilink]]`
+   - 检查链接指向的文件是否存在
+   - 如果不存在，创建空文件
+
+3. **检查覆盖度**：
+   - 统计每个概念文件的字数
+   - 如果 <100 字，标记为覆盖度不足
+
+4. **生成检查报告**
+
 ## 核心理念
 
 - **用户收集**：将感兴趣的文章保存到 `raw/` 目录
